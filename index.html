@@ -2,17 +2,2779 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src https://script.google.com https://script.googleusercontent.com; form-action 'none'; base-uri 'none'">
+<script>(function(){var h=location.hash;window.__fl1h1={hash:h,href:location.href};if(h){try{history.replaceState(history.state,'',location.pathname+location.search);}catch(e){}}})();</script>
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<meta name="robots" content="noindex,nofollow">
 <title>Puzzle prototype (test)</title>
-<style>body{font:17px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#f4f6f8;color:#1d2731}main{max-width:520px;margin:0 auto;padding:28px 18px}h1{font-size:22px;margin:0 0 10px}</style>
+<style>:root {
+  /* neutral dark background (mandate §8), the same in every version; the board itself stays light for contrast */
+  --bg: #1e2226; --ink: #e8edf1; --muted: #a3aeb7; --card: #2b3137; --line: #434c54;
+  --accent: #4d8dff; --accent-ink: #ffffff; --fire: #f06a1d; --warm: #ffcf3f; --cold: #6aa8ea; --bad: #ff8a4c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overscroll-behavior: none; }
+body { display: flex; justify-content: center; }
+#app { width: 100%; max-width: 480px; min-height: 100%; display: flex; flex-direction: column; position: relative; }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px 4px; min-height: 44px; }
+.badge { font-weight: 650; font-size: 17px; display: flex; align-items: center; gap: 6px; }
+.badge .sym { font-size: 20px; line-height: 1; }
+.dots { display: flex; gap: 6px; align-items: center; }
+.dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); display: block; }
+.dots i.on { background: var(--ink); }
+.dots i.done { background: var(--muted); }
+.hint { padding: 2px 14px 6px; min-height: 30px; color: var(--muted); font-size: 15px; }
+.hint b { color: var(--ink); }
+#stage { position: relative; display: flex; justify-content: center; }
+canvas#board { touch-action: none; display: block; user-select: none; -webkit-user-select: none; }
+.controls { display: flex; gap: 8px; padding: 8px 10px 14px; justify-content: center; flex-wrap: nowrap; }
+.controls button { flex: 0 1 auto; min-width: 0; padding: 10px 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.controls button.grow { flex: 1 1 0; }
+@media (max-width: 380px) { .controls { gap: 6px; padding: 8px 8px 12px; } .controls button { padding: 10px 10px; font-size: 15px; } .controls button.strike { min-width: 84px; } }
+button { font: inherit; border: 0; border-radius: 12px; min-height: 48px; padding: 10px 16px; cursor: pointer;
+  background: var(--card); color: var(--ink); box-shadow: 0 1px 0 rgba(0,0,0,.25), inset 0 0 0 1px var(--line); }
+button.primary { background: var(--accent); color: var(--accent-ink); box-shadow: none; font-weight: 650; }
+button.strike { background: var(--fire); color: #fff; box-shadow: none; font-weight: 700; min-width: 108px; }
+button:disabled { opacity: .45; cursor: default; }
+button.hold.active { background: #4a3d16; box-shadow: inset 0 0 0 2px var(--warm); }
+.grow { flex: 1; }
+.sheet { position: absolute; inset: 0; background: var(--bg); overflow-y: auto; padding: 18px 16px 28px; z-index: 5; }
+.sheet h1 { font-size: 22px; margin: 6px 0 12px; }
+.sheet h2 { font-size: 18px; margin: 18px 0 8px; }
+.sheet p { margin: 8px 0; }
+.card { background: var(--card); border-radius: 14px; padding: 14px; margin: 10px 0; box-shadow: inset 0 0 0 1px var(--line); }
+.likert { display: flex; gap: 6px; justify-content: space-between; margin-top: 8px; }
+.likert button { min-height: 44px; min-width: 0; flex: 1; padding: 0; border-radius: 10px; }
+.likert button.sel { background: var(--accent); color: #fff; box-shadow: none; }
+.ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; margin-top: 4px; }
+textarea { width: 100%; min-height: 76px; font: inherit; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: #22272c; color: var(--ink); resize: vertical; }
+.choice { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; margin: 8px 0; padding: 14px; }
+.choice .sym { font-size: 24px; width: 30px; text-align: center; }
+.choice .rank { margin-left: auto; font-weight: 700; min-width: 24px; text-align: right; }
+.choice.sel { box-shadow: inset 0 0 0 2px var(--accent); }
+.banner { position: absolute; left: 10px; right: 10px; bottom: 10px; background: var(--card); border-radius: 14px; padding: 12px 14px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.45), inset 0 0 0 1px var(--line); z-index: 4; display: flex; flex-direction: column; gap: 10px; }
+.banner .row { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.banner .msg { font-weight: 650; }
+.err { color: var(--bad); font-size: 14px; min-height: 18px; }
+.banner .card { margin: 0; padding: 8px 10px; }
+.sheet.done h1 { font-size: 19px; margin: 2px 0 8px; }
+.sheet.done h2 { font-size: 17px; margin: 10px 0 4px; }
+.sheet.done p { margin: 4px 0; }
+.sheet.done .card { padding: 10px 12px; margin: 6px 0; }
+.sheet.done .choice { padding: 9px 12px; margin: 6px 0; }
+.banner textarea { min-height: 52px; }
+.banner .err:empty { display: none; }
+.small { font-size: 13px; color: var(--muted); }
+.ruleimg { display: block; margin: 6px auto 2px; }
+.list button { width: 100%; text-align: left; margin: 6px 0; }
+pre.rec { white-space: pre-wrap; word-break: break-all; font-size: 11px; background: #22272c; color: var(--ink); padding: 8px; border-radius: 8px; max-height: 260px; overflow: auto; }
+.shake { animation: shake .3s; }
+@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+/* reduced motion: no shake (the reason still shows on the hint line) */
+.reduce .shake { animation: none; }
+/* neutral touch check: plain shapes only */
+.warm p { margin: 4px 0 10px; }
+.tapzone { display: flex; justify-content: center; padding: 18px 0; }
+button.dot { width: 72px; height: 72px; min-height: 72px; border-radius: 50%; background: var(--accent); box-shadow: none; padding: 0; }
+.pad { position: relative; height: 210px; border-radius: 12px; background: #22272c; touch-action: none; overflow: hidden; }
+.pad .target { position: absolute; right: 18px; top: 60px; width: 92px; height: 92px; border: 3px dashed var(--muted); border-radius: 12px; }
+.pad .token { position: absolute; left: 22px; top: 76px; width: 60px; height: 60px; border-radius: 10px; background: #9aa6b0; touch-action: none; }
+.scrollbox { height: 170px; overflow-y: auto; touch-action: pan-y; border-radius: 12px; background: #22272c; padding: 6px 12px; }
+.scrollbox .line { padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--muted); }
+.scrollbox button { margin: 12px 0 6px; }
+/* pairwise choices and the continuation question */
+.row { display: flex; gap: 10px; }
+.choice.half { flex: 1 1 0; margin: 6px 0 0; padding: 12px; justify-content: center; }
+.pair { padding: 10px 12px; }
+</style>
 </head>
 <body>
-<main>
-<h1>This link is not valid.</h1>
-<p>Please go back to the study page and use the link you were given.</p>
-</main>
+<div id="app"></div>
+<script>window.FL1H1_CONFIG = {"receiver":"https://script.google.com/macros/s/AKfycbxrk_rASDT2DlfUpz9-iCuGWMTdkqbts0jyNT0g38zQdTOulQwQBMUcPcjjOlEZoP_T/exec","origin":"https://firstlight-r1.wintermeregame.com","shell":"fl1h1-1"};</script>
+<script>window.FL1R1_BUILD = {"id":"359fe8bd4e69","ruleset":"fl1-rules-r1","scenesHash":"0ccf8220e7a300b3fe9acb971e904e4127b0ddb49b9a192a2c2c98453a8e9278"};</script>
+<script>window.FL1R1_SCENES = {"schema":"fl1r1-scenes-2","ruleset":"fl1-rules-r1","scenesHash":"0ccf8220e7a300b3fe9acb971e904e4127b0ddb49b9a192a2c2c98453a8e9278","conditions":{"A":{"sym":"◆","name":"Pieces","line":"Place the pieces to build a path of fuel, then strike.","input":"drag pieces from the hand onto snow; tap a piece to turn it; drag it to move it or back to the hand","material":"the scene hand; a piece uses its squares","branching":"the T piece where the hand has one (three-home scenes); pieces may also touch side by side","controls":["Undo","Preview","Strike"]},"B":{"sym":"●","name":"Ready path","line":"The path is already built. Check it, then strike.","input":"inspect only: the board cannot be changed","material":"one competent minimal structure built from the same hand (ready-path rule in tools/analyze.ts)","branching":"as laid","controls":["Preview","Strike"]},"C":{"sym":"▲","name":"Draw","line":"Draw a path of fuel with your finger, then strike.","input":"drag across snow to lay fuel square by square (never across a rock, a home or the fire, never corner to corner); tap fuel to remove it","material":"as many squares as the A hand holds; every square uses one","branching":"draw on from any fuel square; branch squares cost one square like any other","controls":["Undo","Preview","Strike"]}},"sets":{"X":["T1","M1a","M2a"],"Y":["T2","M1b","M2b"],"Z":["T3","M1c","M2c"]},"extras":["E1","E2"],"probes":["P1","P2"],"assignment":[{"slot":"P01","order":"ABC","rot":0,"sets":{"A":"X","B":"Y","C":"Z"},"display":"ABC","pairs":"AB,AC,BC"},{"slot":"P02","order":"ABC","rot":1,"sets":{"A":"Y","B":"Z","C":"X"},"display":"ACB","pairs":"AC,BC,AB"},{"slot":"P03","order":"ACB","rot":0,"sets":{"A":"X","B":"Y","C":"Z"},"display":"CAB","pairs":"BC,AB,AC"},{"slot":"P04","order":"ACB","rot":1,"sets":{"A":"Y","B":"Z","C":"X"},"display":"BCA","pairs":"BA,CA,CB"},{"slot":"P05","order":"BAC","rot":1,"sets":{"A":"Y","B":"Z","C":"X"},"display":"BCA","pairs":"CA,CB,BA"},{"slot":"P06","order":"BAC","rot":2,"sets":{"A":"Z","B":"X","C":"Y"},"display":"CAB","pairs":"CB,BA,CA"},{"slot":"P07","order":"BCA","rot":1,"sets":{"A":"Y","B":"Z","C":"X"},"display":"CBA","pairs":"AB,AC,BC"},{"slot":"P08","order":"BCA","rot":2,"sets":{"A":"Z","B":"X","C":"Y"},"display":"ABC","pairs":"AC,BC,AB"},{"slot":"P09","order":"CAB","rot":0,"sets":{"A":"X","B":"Y","C":"Z"},"display":"ABC","pairs":"BC,AB,AC"},{"slot":"P10","order":"CAB","rot":2,"sets":{"A":"Z","B":"X","C":"Y"},"display":"BAC","pairs":"BA,CA,CB"},{"slot":"P11","order":"CBA","rot":0,"sets":{"A":"X","B":"Y","C":"Z"},"display":"CAB","pairs":"CA,CB,BA"},{"slot":"P12","order":"CBA","rot":2,"sets":{"A":"Z","B":"X","C":"Y"},"display":"BCA","pairs":"CB,BA,CA"}],"hashes":{"E1":"09b13681e9f3e79548be6885ea6c75a30253d3ecdbdc874b0fa0acba83a81c56","E2":"3ab43cc9383090e116ab44db3dd2714272ce969f9c15fa14b772056a6d9400a8","M1a":"a7414a88ab7cd921952c19c59b562e5b691838b7e56e76c5959869b68dd8bf56","M1b":"6e3ff571239aa24a81238f9099075758237b1aa0131e7084ceac332051c8b867","M1c":"db1d263e0ebd70ea5ea23e7244c06b2cdbcff7c00f2faa07ec3b015ad72accc8","M2a":"4cb8dbea0509f7f4d5e4c57d9d6c512e98cec3bd7ca97e78a65be9ed33203087","M2b":"4d8ce98e07e139ba24a4a1ea9c211858106f3ddf4918ebbdc8c61a08a7da6260","M2c":"12bdb1b60f0cefc344df81a7bb51a5515c0db615826de6f26ee5717b267ad84e","P1":"fff927e249dcda47ca83afc24f10813e915e7787db1bb889f50391b10ff134bf","P2":"11a0f464ad7fa17387d1279de9312fb8dad3c3638985fe62f3337553c45427a4","T1":"78f8368f38c5807d0b4bed852e78f45d0deef55612bdacb614d0b9cb57d787ce","T2":"7f05c7e4237271861344464b0151db5f89b06449c3b5480d57b6aa4eb3cc313f","T3":"05a72348ce824c0bb111c3b48c079b30259d3ce204ad8df93ed08b7e9c76dcf3"},"selftest":{"vectors":[{"sid":"M1a","cond":"A","log":[["tturn",1],["place",2,4,1],["place",0,2,3],["move",0,4,4],["place",1,1,0],["unplace",2],["move",1,5,1],["undo"],["unplace",0],["place",2,2,4],["bturn",1],["unplace",1],["strike",[1]],["place",0,4,5],["bturn",2],["bturn",0],["strike",null],["bturn",0],["place",1,1,6],["bturn",2],["strike",null],["undo"],["undo"],["bturn",2],["unplace",2],["unplace",0],["tturn",1],["tturn",2],["place",0,4,0],["strike",[1]],["strike",[1]],["place",1,0,1],["strike",[0]],["tturn",2],["tturn",2],["move",1,1,4],["strike",null],["unplace",0],["strike",[0,1]],["strike",[0]]],"stateHash":"68126a7d1a5434c8cdc401d5f5ede08a0a5c99ac410f81d6d79305d3792b96f3","logHash":"e5d219ca7dd542260ee075cc556366e9c9ef564a9977dc35858075fd9e2f368d"},{"sid":"M2b","cond":"C","log":[["stroke",[10,9,16,9]],["stroke",[9,2,3,2,1]],["stroke",[3,10,11,4]],["stroke",[24,23,16]],["stroke",[15,8,15,14]],["undo"],["strike",null],["erase",23],["stroke",[14,7,14,15]],["undo"],["strike",null],["erase",3],["strike",null],["stroke",[44,43,36]],["stroke",[6,5,6,5]],["strike",null],["strike",[]],["erase",44],["stroke",[19,18,25,24]],["undo"],["undo"],["undo"],["strike",null],["stroke",[48,55]],["strike",[2]],["strike",[0,1,2]],["strike",[1]],["strike",null],["strike",null],["strike",[]],["undo"],["stroke",[18,11,4,3]],["strike",null],["strike",null],["undo"],["stroke",[50,49]],["strike",[0,1]],["erase",43],["stroke",[26,25,26,19]],["strike",null]],"stateHash":"8f44fc78d20299c0a2417bb9d74c50562ae0e3c0c04a5a7c808276fbd10cd955","logHash":"bc1eb9ebe9044db35fe2a972d93e2769b476f19fb9a4208717bc602487185a37"},{"sid":"M1c","cond":"B","log":[["strike",[]],["strike",[0]],["strike",[0]],["replay"],["strike",[1]],["strike",[]],["strike",[0,1]],["strike",[1]],["strike",[0,1]],["strike",[]],["strike",[]],["strike",[0]],["strike",[0,1]],["strike",[0,1]],["strike",[1]],["replay"],["strike",[1]],["strike",[0,1]],["strike",[1]],["strike",[0]],["strike",[]],["strike",[]],["strike",[0]],["replay"],["strike",[0,1]],["strike",[]],["strike",[0]],["strike",[1]],["strike",[0,1]],["strike",[1]],["strike",[1]],["strike",[0,1]],["strike",[]],["replay"],["strike",[0]],["strike",[0]],["strike",[]],["strike",[0]],["strike",[0]],["replay"]],"stateHash":"dad5ca4ee493e5b075119ff7d8f03c958aee21a9a5cb0c21e7f376d11e63fdee","logHash":"1c7512a406f0974781a8c860691222e6cfc4dc647445cedeb9dee0b5e82309f9"},{"sid":"P1","cond":"P","log":[["strike",[2]],["toggle",21],["strike",[0]]],"stateHash":"e1bf4f835191d947945426dde416cee2c40da83945cd109367fd3ecc52f7f2ad","logHash":"4912b5297fe8636111e6d0208f8d8451ff8b7635499d8ad7d8908a9870f39050"},{"sid":"E2","cond":"C","log":[["stroke",[50,49]],["stroke",[30,37]],["stroke",[24,17,24]],["stroke",[8,15,8,15,8]],["stroke",[1,0,1,0,1,0]],["strike",[0,1]],["undo"],["undo"],["stroke",[17,10,17,16,15]],["strike",[0,1]],["strike",[]],["strike",null],["undo"],["stroke",[22,15]],["undo"],["stroke",[31,24,17]],["undo"],["stroke",[8,15,22,21]],["undo"],["stroke",[13,20,13,20]],["stroke",[28,29]],["strike",null],["strike",[1]],["undo"],["stroke",[3,4,5,4,3]],["strike",null],["undo"],["stroke",[34,33,32]],["erase",49],["stroke",[48,41]],["undo"],["stroke",[23,24,31,24,17,16,23]],["undo"],["stroke",[51,52,51,44,43]],["undo"],["stroke",[26,19,26,27]],["strike",null],["undo"],["stroke",[34,27]],["undo"]],"stateHash":"0034107a7c25ee156332ec9c1bffbc318ec57d6095706da12531c0fddc69df37","logHash":"7885f70e0bf4afcb107612766b7f0f9ace07729d91d3d09a07c920a03d29a7aa"},{"sid":"M2c","cond":"A","log":[["tturn",0],["tturn",0],["strike",null],["place",2,1,2],["unplace",2],["place",1,1,3],["undo"],["undo"],["place",3,4,2],["tturn",0],["strike",[0,1,2]],["undo"],["strike",null],["place",1,3,0],["move",2,4,7],["strike",null],["place",0,5,1],["unplace",0],["strike",[0,2]],["undo"],["move",1,1,2],["bturn",1],["undo"],["move",0,3,0],["tturn",3],["unplace",1],["bturn",0],["unplace",0],["strike",null],["place",0,0,6],["place",1,4,0],["tturn",3],["undo"],["place",3,5,4],["undo"],["place",3,4,1],["unplace",0],["undo"],["tturn",1],["tturn",1]],"stateHash":"ab7ac75d7afcf002f572ad2a39df441ca3c32ddc4d139fe0fe62fcc6df0e7766","logHash":"434b26fcf08cbb7efd1d8725429224955f842925acf502d9e09feee8d52b75e7"}],"sha":[["abc","ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"],["abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq","248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"]]},"scenes":{"T1":{"id":"T1","kind":"teach","w":7,"h":8,"grid":[".......",".......","...H...",".......",".#.....",".....#.","...F...","......."],"hand":["I3"],"laid":[24,31,38],"tiling":[{"type":"I3","o":1,"x":3,"y":3}]},"T2":{"id":"T2","kind":"teach","w":7,"h":8,"grid":[".......",".....#.","..H....","....#..",".......","#......","..F....","......."],"hand":["I3"],"laid":[23,30,37],"tiling":[{"type":"I3","o":1,"x":2,"y":3}]},"T3":{"id":"T3","kind":"teach","w":7,"h":8,"grid":[".......","..#....",".......",".....H.",".#.....","...#...",".......",".....F."],"hand":["I3"],"laid":[33,40,47],"tiling":[{"type":"I3","o":1,"x":5,"y":4}]},"M1a":{"id":"M1a","kind":"main","w":7,"h":8,"grid":[".......",".......","..H...H","...##..","##.....",".......","...F...","......."],"hand":["L3","L3","I3"],"laid":[17,18,19,26,30,31,32,33,38],"tiling":[{"type":"L3","o":2,"x":2,"y":4},{"type":"L3","o":3,"x":4,"y":3},{"type":"I3","o":0,"x":3,"y":2}]},"M1b":{"id":"M1b","kind":"main","w":7,"h":8,"grid":[".......",".....#H","..#H...",".......","..#....","##.....","..F....","......."],"hand":["L3","L3","I3"],"laid":[18,19,20,25,32,33,38,39,45],"tiling":[{"type":"L3","o":1,"x":3,"y":5},{"type":"L3","o":0,"x":4,"y":3},{"type":"I3","o":0,"x":4,"y":2}]},"M1c":{"id":"M1c","kind":"main","w":7,"h":8,"grid":[".....H.","..H....","..#....",".......","....#..",".......","....F..","......."],"hand":["L3","L3","I3"],"laid":[3,4,10,17,24,31,37,38,45],"tiling":[{"type":"L3","o":2,"x":2,"y":5},{"type":"I3","o":1,"x":3,"y":2},{"type":"L3","o":1,"x":3,"y":0}]},"E1":{"id":"E1","kind":"extra","w":7,"h":8,"grid":[".......",".#.H...","...#.H#","......#","....#..","....#..",".F.....","......."],"hand":["L3","L3","I3"],"laid":[11,18,23,24,25,30,37,44,45],"tiling":[{"type":"L3","o":0,"x":2,"y":5},{"type":"L3","o":1,"x":2,"y":3},{"type":"I3","o":1,"x":4,"y":1}]},"E2":{"id":"E2","kind":"extra","w":7,"h":8,"grid":["..H....","..#.##.","H...#..","....#..",".......",".#.....","...F...","......."],"hand":["L3","L3","I3"],"laid":[1,8,15,16,23,24,31,32,38],"tiling":[{"type":"L3","o":1,"x":3,"y":4},{"type":"L3","o":0,"x":2,"y":2},{"type":"I3","o":1,"x":1,"y":0}]},"M2a":{"id":"M2a","kind":"main","w":7,"h":8,"grid":[".H.....","##....H","..H....","..#....","..#....",".......",".F.....","......."],"hand":["T4","L3","I3","I2"],"laid":[2,4,9,10,11,12,17,24,31,37,38,44],"tiling":[{"type":"L3","o":1,"x":2,"y":5},{"type":"I3","o":1,"x":3,"y":2},{"type":"T4","o":2,"x":3,"y":0},{"type":"I2","o":1,"x":2,"y":0}]},"M2b":{"id":"M2b","kind":"main","w":7,"h":8,"grid":["H......",".....##","......#","H.....H",".......",".....##",".....#.","..F...."],"hand":["T4","L3","I3","I2"],"laid":[7,14,15,16,23,24,25,26,30,36,37,44],"tiling":[{"type":"T4","o":1,"x":1,"y":4},{"type":"I2","o":1,"x":2,"y":2},{"type":"I3","o":0,"x":3,"y":3},{"type":"L3","o":0,"x":0,"y":1}]},"M2c":{"id":"M2c","kind":"main","w":7,"h":8,"grid":["......H",".##....","#......","H..#H..","...#...","...##..",".....F.","......."],"hand":["T4","L3","I3","I2"],"laid":[12,13,16,17,18,19,22,23,26,33,34,40],"tiling":[{"type":"T4","o":3,"x":5,"y":3},{"type":"I3","o":0,"x":3,"y":2},{"type":"I2","o":0,"x":5,"y":1},{"type":"L3","o":3,"x":1,"y":2}]},"P1":{"id":"P1","kind":"probe","w":7,"h":8,"grid":[".H.....",".....H.",".....#.",".......","......H","#......","...F..#","......."],"hand":[],"laid":[38,31,24,23,22,15,8,25,18,32,33]},"P2":{"id":"P2","kind":"probe","w":7,"h":8,"grid":["....H..","#......",".H.....","...#...",".....H.",".......","..F....","......#"],"hand":[],"laid":[37,30,23,16,9,11,38,39,40]}}};</script>
+<script>/*
+ * SHA-256 of a string's UTF-8 bytes, in plain code so that the page (which has no network and may
+ * run from a file) and the Node replay tool compute state hashes with the same function.
+ * Checked against Node's crypto in tests/replay.test.js.
+ * Loaded as a classic script in the page (global FLHash) and with require() in Node.
+ */
+'use strict';
+
+                                                       
+
+const FLHash = (function () {
+  const K = new Uint32Array([
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+  ]);
+
+  /** UTF-8 bytes of a JavaScript string (lone surrogates become U+FFFD, as TextEncoder does). */
+  function utf8(s        )             {
+    const out           = [];
+    for (let i = 0; i < s.length; i++) {
+      let c = s.charCodeAt(i);
+      if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {
+        const d = s.charCodeAt(i + 1);
+        if (d >= 0xdc00 && d <= 0xdfff) { c = 0x10000 + ((c - 0xd800) << 10) + (d - 0xdc00); i++; } else c = 0xfffd;
+      } else if (c >= 0xd800 && c <= 0xdfff) c = 0xfffd;
+      if (c < 0x80) out.push(c);
+      else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63));
+      else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      else out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    }
+    return Uint8Array.from(out);
+  }
+
+  function bytesHex(msg            )         {
+    const len = msg.length;
+    const total = Math.ceil((len + 9) / 64) * 64;
+    const buf = new Uint8Array(total);
+    buf.set(msg);
+    buf[len] = 0x80;
+    const bits = len * 8;
+    // message length in bits, big-endian, in the last 8 bytes (lengths here stay far below 2^53)
+    const hi = Math.floor(bits / 0x100000000), lo = bits >>> 0;
+    buf[total - 8] = (hi >>> 24) & 255; buf[total - 7] = (hi >>> 16) & 255; buf[total - 6] = (hi >>> 8) & 255; buf[total - 5] = hi & 255;
+    buf[total - 4] = (lo >>> 24) & 255; buf[total - 3] = (lo >>> 16) & 255; buf[total - 2] = (lo >>> 8) & 255; buf[total - 1] = lo & 255;
+    const H = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]);
+    const w = new Uint32Array(64);
+    const rotr = (x        , n        )         => (x >>> n) | (x << (32 - n));
+    for (let off = 0; off < total; off += 64) {
+      for (let t = 0; t < 16; t++) {
+        const j = off + t * 4;
+        w[t] = (buf[j] << 24) | (buf[j + 1] << 16) | (buf[j + 2] << 8) | buf[j + 3];
+      }
+      for (let t = 16; t < 64; t++) {
+        const s0 = rotr(w[t - 15], 7) ^ rotr(w[t - 15], 18) ^ (w[t - 15] >>> 3);
+        const s1 = rotr(w[t - 2], 17) ^ rotr(w[t - 2], 19) ^ (w[t - 2] >>> 10);
+        w[t] = (w[t - 16] + s0 + w[t - 7] + s1) >>> 0;
+      }
+      let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+      for (let t = 0; t < 64; t++) {
+        const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+        const ch = (e & f) ^ (~e & g);
+        const t1 = (h + S1 + ch + K[t] + w[t]) >>> 0;
+        const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+        const maj = (a & b) ^ (a & c) ^ (b & c);
+        const t2 = (S0 + maj) >>> 0;
+        h = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+      }
+      H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0; H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
+      H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0; H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;
+    }
+    let hex = '';
+    for (let i = 0; i < 8; i++) hex += H[i].toString(16).padStart(8, '0');
+    return hex;
+  }
+
+  /** SHA-256 (hex) of the UTF-8 bytes of s. */
+  function sha256Hex(s        )         { return bytesHex(utf8(s)); }
+
+  return { sha256Hex, bytesHex, utf8 };
+})();
+                                      
+
+if (typeof module === 'object' && module && module.exports) module.exports = FLHash;
+else (globalThis       ).FLHash = FLHash;
+</script>
+<script>/*
+ * Puzzle engine — ruleset id below. (Participant pages carry no project or brand names.)
+ *
+ * ONE propagation law, nothing else:
+ *   Fire starts at the fire square. It spreads from a burning square to every fuel
+ *   square that shares a side with it, one step at a time. Each fuel square burns once.
+ *   A home warms when a burning square shares a side with it. Corners never touch.
+ *
+ * Not present by design (mandate): wind, frost of any thickness, timing rules,
+ * multi-hit, double-path, branch priority, mid-burn control, economy.
+ *
+ * The outcome is a pure function of the final set of fuel squares, so placement
+ * order cannot matter. Preview, strike animation and result all call burn().
+ *
+ * Loaded as a classic script in the page (global FLE) and with require() in Node.
+ */
+'use strict';
+
+/** Scene definition as stored in scenes.json. */
+                           
+                                                                                     
+                                      
+ 
+/** Parsed scene. */
+                        
+                                                                                       
+                                                
+ 
+                             
+                                                                         
+                
+                                               
+                  
+                                                                                                  
+ 
+                                                                                           
+                               
+
+                                                       
+
+const FLE = (function () {
+  const RULESET = 'fl1-rules-r1';
+  const SNOW = 0, ROCK = 1, SOURCE = 2, HOME = 3;
+  /** Fixed neighbour order N, E, S, W (all tie-breaks depend on it). */
+  const DIRS                                           = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+
+  /** Base shapes. Screen coordinates: x right, y down. */
+  const PIECE_BASE                        = {
+    I2: [[0, 0], [1, 0]],
+    I3: [[0, 0], [1, 0], [2, 0]],
+    L3: [[0, 0], [0, 1], [1, 1]],
+    T4: [[0, 0], [1, 0], [2, 0], [1, 1]],
+  };
+
+  function normalize(cells       )        {
+    let mx = Infinity, my = Infinity;
+    for (const [x, y] of cells) { if (x < mx) mx = x; if (y < my) my = y; }
+    const out = cells.map(([x, y]) => [x - mx, y - my]);
+    out.sort((a, b) => (a[1] - b[1]) || (a[0] - b[0]));
+    return out;
+  }
+  /** 90 degrees clockwise on screen: right -> down -> left -> up. */
+  function rotateCW(cells       )        { return normalize(cells.map(([x, y]) => [-y, x])); }
+
+  /** distinct orientations, cycle order = repeated CW turns */
+  const ORIENTS                          = {};
+  for (const k of Object.keys(PIECE_BASE)) {
+    const list          = [];
+    let cur = normalize(PIECE_BASE[k]);
+    for (let r = 0; r < 4; r++) {
+      const key = JSON.stringify(cur);
+      if (!list.some((o) => JSON.stringify(o) === key)) list.push(cur);
+      cur = rotateCW(cur);
+    }
+    ORIENTS[k] = list;
+  }
+  function pieceSize(type        )         { return PIECE_BASE[type].length; }
+
+  /**
+   * Scene definition (JSON):
+   *  { id, w, h, grid: string[h] of '.', '#', 'F', 'H'; hand: string[]; laid?: number[] }
+   */
+  function parseScene(def          )        {
+    const w = def.w, h = def.h;
+    if (!Array.isArray(def.grid) || def.grid.length !== h) throw new Error('bad grid ' + def.id);
+    const cells = new Uint8Array(w * h);
+    let source = -1; const homes           = [];
+    for (let y = 0; y < h; y++) {
+      const row = def.grid[y];
+      if (row.length !== w) throw new Error('bad row ' + def.id);
+      for (let x = 0; x < w; x++) {
+        const c = row[x], i = y * w + x;
+        if (c === '.') cells[i] = SNOW;
+        else if (c === '#') cells[i] = ROCK;
+        else if (c === 'F') { cells[i] = SOURCE; if (source >= 0) throw new Error('two fires ' + def.id); source = i; }
+        else if (c === 'H') { cells[i] = HOME; homes.push(i); }
+        else throw new Error('bad char ' + c + ' in ' + def.id);
+      }
+    }
+    if (source < 0) throw new Error('no fire ' + def.id);
+    const hand = (def.hand || []).slice();
+    for (const p of hand) if (!PIECE_BASE[p]) throw new Error('bad piece ' + p);
+    const budget = hand.reduce((s, p) => s + pieceSize(p), 0);
+    return { id: def.id, w, h, cells, source, homes, hand, budget, def };
+  }
+
+  /** side neighbours of cell i, in N,E,S,W order */
+  function neighbors(sc       , i        )           {
+    const x = i % sc.w, y = (i - x) / sc.w, out           = [];
+    for (const [dx, dy] of DIRS) {
+      const nx = x + dx, ny = y + dy;
+      if (nx >= 0 && ny >= 0 && nx < sc.w && ny < sc.h) out.push(ny * sc.w + nx);
+    }
+    return out;
+  }
+
+  function emptyFuel(sc       )             { return new Uint8Array(sc.w * sc.h); }
+  function fuelFrom(sc       , list                  )             {
+    const f = emptyFuel(sc);
+    for (const i of list) {
+      if (sc.cells[i] !== SNOW) throw new Error('fuel on non-snow cell ' + i + ' in ' + sc.id);
+      f[i] = 1;
+    }
+    return f;
+  }
+  function fuelList(fuel                   )           { const out           = []; for (let i = 0; i < fuel.length; i++) if (fuel[i]) out.push(i); return out; }
+  function fuelCount(fuel                   )         { let n = 0; for (let i = 0; i < fuel.length; i++) n += fuel[i]; return n; }
+
+  /**
+   * THE propagation law. Pure function of (scene, final fuel set).
+   * t[i] = step at which square i is burning (fire square = 0), -1 if never.
+   * homeT[k] = step at which home k warms (one step after a side-neighbour burns), -1 if cold.
+   */
+  function burn(sc       , fuel                   )             {
+    const n = sc.w * sc.h;
+    const t = new Int16Array(n).fill(-1);
+    t[sc.source] = 0;
+    const q = [sc.source];
+    for (let qi = 0; qi < q.length; qi++) {
+      const c = q[qi];
+      for (const nb of neighbors(sc, c)) {
+        if (fuel[nb] && sc.cells[nb] === SNOW && t[nb] < 0) { t[nb] = t[c] + 1; q.push(nb); }
+      }
+    }
+    const homeT = sc.homes.map((hm) => {
+      let best = -1;
+      for (const nb of neighbors(sc, hm)) {
+        if (t[nb] >= 0) { const v = t[nb] + 1; if (best < 0 || v < best) best = v; }
+      }
+      return best;
+    });
+    const warm           = [], cold           = [];
+    homeT.forEach((v, k) => (v >= 0 ? warm : cold).push(k));
+    let steps = 0, burnt = 0, unburnt = 0;
+    for (let i = 0; i < n; i++) {
+      if (t[i] > steps) steps = t[i];
+      if (fuel[i]) { if (t[i] >= 0) burnt++; else unburnt++; }
+    }
+    for (const v of homeT) if (v > steps) steps = v;
+    return { t, homeT, warm, cold, steps, burnt, unburnt, success: cold.length === 0 };
+  }
+
+  /**
+   * After a miss: for every cold home, where the fire stopped (endpoint) and the first
+   * square where a connection is missing (gap). 0-1 BFS from all burning squares
+   * through snow (cost 1) and unburnt fuel (cost 0) to a snow square beside the home.
+   * Deterministic: starts in index order, neighbours N,E,S,W.
+   */
+  function missMarkers(sc       , fuel                   , b            )               {
+    const res               = [];
+    for (const k of b.cold) {
+      const hm = sc.homes[k];
+      const targets = new Set(neighbors(sc, hm).filter((i) => sc.cells[i] === SNOW));
+      const n = sc.w * sc.h;
+      const dist = new Int32Array(n).fill(1 << 29);
+      const par = new Int32Array(n).fill(-1);
+      const dq           = [];
+      for (let i = 0; i < n; i++) if (b.t[i] >= 0) { dist[i] = 0; dq.push(i); }
+      let head = 0; const front           = [];
+      let found = -1;
+      // simple 0-1 BFS with a front stack and a back queue
+      const popNext = ()         => (front.length ? (front.pop()          ) : (head < dq.length ? dq[head++] : -1));
+      const done = new Uint8Array(n);
+      for (;;) {
+        const c = popNext();
+        if (c < 0) break;
+        if (done[c]) continue;
+        done[c] = 1;
+        if (targets.has(c) && b.t[c] < 0) { found = c; break; }
+        for (const nb of neighbors(sc, c)) {
+          if (sc.cells[nb] !== SNOW || b.t[nb] >= 0 || done[nb]) continue;
+          const w = fuel[nb] ? 0 : 1;
+          if (dist[c] + w < dist[nb]) {
+            dist[nb] = dist[c] + w; par[nb] = c;
+            if (w === 0) front.push(nb); else dq.push(nb);
+          }
+        }
+      }
+      if (found < 0) { res.push({ home: k, endpoint: -1, gap: -1, path: [] }); continue; }
+      const path           = [];
+      for (let c = found; c >= 0; c = par[c]) path.push(c);
+      path.reverse();
+      const endpoint = path[0];
+      const gap = path.find((c) => b.t[c] < 0 && !fuel[c]);
+      res.push({ home: k, endpoint, gap: gap === undefined ? -1 : gap, path });
+    }
+    return res;
+  }
+
+  /** Cells of a piece placement (orientation index o, anchor x,y = top-left of orientation box). */
+  function placementCells(type        , o        , x        , y        )        {
+    const ori = ORIENTS[type][o % ORIENTS[type].length];
+    return ori.map(([dx, dy]) => [x + dx, y + dy]);
+  }
+  /** occ: piece id per cell or -1 */
+  function canPlace(sc       , occ                   , cellsXY       , ignoreId         )          {
+    for (const [x, y] of cellsXY) {
+      if (x < 0 || y < 0 || x >= sc.w || y >= sc.h) return false;
+      const i = y * sc.w + x;
+      if (sc.cells[i] !== SNOW) return false;
+      if (occ[i] >= 0 && occ[i] !== ignoreId) return false;
+    }
+    return true;
+  }
+  /** Junction squares: fuel squares with 3 or more side contacts among fuel and the fire (homes do not count). */
+  function junctions(sc       , fuel                   )           {
+    const out           = [];
+    for (let i = 0; i < fuel.length; i++) {
+      if (!fuel[i]) continue;
+      let k = 0;
+      for (const nb of neighbors(sc, i)) if (fuel[nb] || sc.cells[nb] === SOURCE) k++;
+      if (k >= 3) out.push(i);
+    }
+    return out;
+  }
+  /** Canonical structure key: sorted fuel indices joined by commas. */
+  function structureKey(fuel                   )         { return fuelList(fuel).join(','); }
+
+  return {
+    RULESET, SNOW, ROCK, SOURCE, HOME, DIRS, PIECE_BASE, ORIENTS,
+    normalize, rotateCW, pieceSize, parseScene, neighbors, emptyFuel, fuelFrom, fuelList, fuelCount,
+    burn, missMarkers, placementCells, canPlace, junctions, structureKey,
+  };
+})();
+                                
+
+if (typeof module === 'object' && module && module.exports) module.exports = FLE;
+else (globalThis       ).FLE = FLE;
+</script>
+<script>/*
+ * Board model: the only code that changes a scene's board. The page sends every board action
+ * through apply() and records it in the scene's input log; the replay tool (tools/replay.ts) runs
+ * the same apply() on a recorded log and must reach the same state hash.
+ *
+ * An action is a short array, [name, ...arguments]:
+ *   A (pieces)   ['tturn', id]          turn a piece in the tray (not a board change, not undoable)
+ *                ['place', id, x, y]    tray piece onto the board, top-left of its box at x,y, as turned
+ *                ['move', id, x, y]     a piece on the board to x,y
+ *                ['bturn', id]          turn a piece on the board in place (nudged by one square if needed)
+ *                ['unplace', id]        a piece on the board back to the tray
+ *   C (draw)     ['stroke', path]       one finger stroke: path = squares passed, each beside the last;
+ *                                       empty squares on it get fuel while material lasts
+ *                ['erase', cell]        tap on fuel to remove it
+ *   A, C         ['undo']               reverse the last board change
+ *   probes (P)   ['toggle', cell]       the one-square change (toggling the same square again undoes it)
+ *   all          ['strike', predicted]  burn the structure; predicted = homes the player chose, or null
+ *                ['replay']             "Play this board again": the board starts over
+ *                ['end', outcome]       the scene ends (solved, skipped, timeUp, probe; quit = Finish now in the optional scene)
+ * Anything else, or an action that is not legal in the current state, is refused and changes nothing.
+ * Loaded as a classic script in the page (global FLM) and with require() in Node.
+ */
+'use strict';
+                                                 
+                                             
+
+                                         
+                                                                                                     
+                                                                                                                                                       
+                        
+                                                                        
+                                    
+                                    
+                                    
+                                      
+                                              
+                         
+                                  
+            
+ 
+                                                              
+                                                                                                  
+                                                                                                  
+
+                                                       
+                                               
+
+const FLM = (function (E        , H           ) {
+  const SCHEMA = 'fl1r1-state-1';
+  const UNDO_CAP = 60;
+  const OUTCOMES = ['solved', 'skipped', 'timeUp', 'probe', 'quit'];
+  /** Where a turned piece may go if it does not fit in place: centre first, then one square N, E, S, W. */
+  const NUDGE                                           = [[0, 0], [0, -1], [1, 0], [0, 1], [-1, 0]];
+
+  function newBoard(sc       , cond      , sid        , sceneHash        , laid          )        {
+    const b        = {
+      sid, sceneHash, cond, sc, laid: laid.slice(), pieces: [], fuel: E.emptyFuel(sc), undo: [], replay: 0, strikes: [],
+      edit: null, outcome: null, n: 0,
+    };
+    if (cond === 'A') b.pieces = sc.hand.map((type, id) => ({ id, type, o: 0, x: 0, y: 0, placed: false }));
+    if (cond === 'B' || cond === 'P') b.fuel = E.fuelFrom(sc, laid);
+    return b;
+  }
+
+  function occupancy(b       , ignoreId        )             {
+    const occ = new Int16Array(b.sc.w * b.sc.h).fill(-1);
+    for (const p of b.pieces) if (p.placed && p.id !== ignoreId) for (const [x, y] of E.placementCells(p.type, p.o, p.x, p.y)) occ[y * b.sc.w + x] = p.id;
+    return occ;
+  }
+  /** The fuel set the burn uses: placed pieces in A, the board's fuel otherwise. */
+  function fuelOf(b       )             {
+    if (b.cond !== 'A') return b.fuel;
+    const f = E.emptyFuel(b.sc);
+    for (const p of b.pieces) if (p.placed) for (const [x, y] of E.placementCells(p.type, p.o, p.x, p.y)) f[y * b.sc.w + x] = 1;
+    return f;
+  }
+  function dims(cells            )                   { let w = 0, h = 0; for (const [x, y] of cells) { if (x + 1 > w) w = x + 1; if (y + 1 > h) h = y + 1; } return [w, h]; }
+  function orients(type        )               { return E.ORIENTS[type]; }
+
+  /** Where a turn of a placed piece lands (the same rule the page shows while turning), or null. */
+  function boardTurn(b       , p       )                                             {
+    const n = orients(p.type).length;
+    if (n === 1) return null;
+    const no = (p.o + 1) % n;
+    const [w0, h0] = dims(orients(p.type)[p.o % n]); const [w1, h1] = dims(orients(p.type)[no]);
+    const cx = p.x + (w0 - 1) / 2, cy = p.y + (h0 - 1) / 2;
+    const bx = Math.floor(cx - (w1 - 1) / 2 + 0.5), by = Math.floor(cy - (h1 - 1) / 2 + 0.5);
+    const occ = occupancy(b, p.id);
+    for (const [dx, dy] of NUDGE) {
+      const cells = E.placementCells(p.type, no, bx + dx, by + dy);
+      if (E.canPlace(b.sc, occ, cells, p.id)) return { o: no, x: bx + dx, y: by + dy };
+    }
+    return null;
+  }
+
+  const isInt = (v         )              => typeof v === 'number' && Number.isInteger(v);
+  function cellOk(b       , c         )              { return isInt(c) && c >= 0 && c < b.sc.w * b.sc.h; }
+  function sideBySide(b       , i        , j        )          {
+    const w = b.sc.w, xi = i % w, yi = (i - xi) / w, xj = j % w, yj = (j - xj) / w;
+    return Math.abs(xi - xj) + Math.abs(yi - yj) === 1;
+  }
+
+  /**
+   * What a stroke along `path` paints: every square on it must be snow and beside the one before it
+   * (so a stroke never leaves a square that touches the last one only at a corner, or jumps a rock);
+   * empty squares get fuel in order until the material runs out.
+   */
+  function strokePaint(b       , path         )               {
+    if (!Array.isArray(path) || path.length === 0) return { ok: false, reason: 'empty path', painted: [], noMore: false };
+    const fuel = b.fuel; const painted           = []; const seen = new Set        ();
+    let count = E.fuelCount(fuel), noMore = false;
+    for (let k = 0; k < path.length; k++) {
+      const c = path[k];
+      if (!cellOk(b, c)) return { ok: false, reason: 'bad square in path', painted: [], noMore: false };
+      if (b.sc.cells[c] !== E.SNOW) return { ok: false, reason: 'path crosses a square that is not snow', painted: [], noMore: false };
+      if (k > 0 && !sideBySide(b, path[k - 1]          , c)) return { ok: false, reason: 'path squares not side by side', painted: [], noMore: false };
+      if (fuel[c] || seen.has(c)) continue;
+      if (count >= b.sc.budget) { noMore = true; continue; }
+      seen.add(c); painted.push(c); count++;
+    }
+    return { ok: true, painted, noMore };
+  }
+
+  function pushUndo(b       , snap                      )       { b.undo.push(snap); if (b.undo.length > UNDO_CAP) b.undo.shift(); }
+  const snapPieces = (b       )          => b.pieces.map((p) => ({ ...p }));
+  const no = (reason        )              => ({ ok: false, reason });
+
+  /** Apply one action. Refused actions change nothing. */
+  function apply(b       , a        )              {
+    if (!Array.isArray(a) || typeof a[0] !== 'string') return no('not an action');
+    if (b.outcome !== null) return no('scene already ended');
+    const name = a[0];
+    const r = applyInner(b, name, a);
+    if (r.ok) b.n++;
+    return r;
+  }
+  function applyInner(b       , name        , a        )              {
+    const A = b.cond === 'A', C = b.cond === 'C', P = b.cond === 'P';
+    const piece = (v         )               => (A && isInt(v) && v >= 0 && v < b.pieces.length ? b.pieces[v] : null);
+    switch (name) {
+      case 'tturn': {
+        if (a.length !== 2) return no('arguments');
+        const p = piece(a[1]); if (!p) return no('no such piece');
+        if (p.placed) return no('piece is on the board');
+        const n = orients(p.type).length; if (n === 1) return no('piece does not turn');
+        p.o = (p.o + 1) % n; return { ok: true };
+      }
+      case 'place': case 'move': {
+        if (a.length !== 4) return no('arguments');
+        const p = piece(a[1]); if (!p) return no('no such piece');
+        const x = a[2], y = a[3]; if (!isInt(x) || !isInt(y)) return no('bad position');
+        if ((name === 'place') === p.placed) return no(name === 'place' ? 'piece is already on the board' : 'piece is not on the board');
+        const cells = E.placementCells(p.type, p.o, x, y);
+        if (!E.canPlace(b.sc, occupancy(b, p.id), cells, p.id)) return no('does not fit there');
+        pushUndo(b, snapPieces(b));
+        p.placed = true; p.x = x; p.y = y; return { ok: true };
+      }
+      case 'bturn': {
+        if (a.length !== 2) return no('arguments');
+        const p = piece(a[1]); if (!p) return no('no such piece');
+        if (!p.placed) return no('piece is not on the board');
+        const t = boardTurn(b, p); if (!t) return no('no room to turn');
+        pushUndo(b, snapPieces(b));
+        p.o = t.o; p.x = t.x; p.y = t.y; return { ok: true };
+      }
+      case 'unplace': {
+        if (a.length !== 2) return no('arguments');
+        const p = piece(a[1]); if (!p) return no('no such piece');
+        if (!p.placed) return no('piece is not on the board');
+        pushUndo(b, snapPieces(b));
+        p.placed = false; return { ok: true };
+      }
+      case 'stroke': {
+        if (!C) return no('not a drawing scene');
+        if (a.length !== 2) return no('arguments');
+        const s = strokePaint(b, a[1]);
+        if (!s.ok) return no(s.reason || 'bad stroke');
+        if (!s.painted.length) return no('stroke painted nothing');
+        pushUndo(b, new Uint8Array(b.fuel));
+        const f = new Uint8Array(b.fuel); for (const c of s.painted) f[c] = 1; b.fuel = f;
+        return { ok: true, painted: s.painted };
+      }
+      case 'erase': {
+        if (!C) return no('not a drawing scene');
+        if (a.length !== 2 || !cellOk(b, a[1])) return no('arguments');
+        const c = a[1]          ; if (!b.fuel[c]) return no('no fuel there');
+        pushUndo(b, new Uint8Array(b.fuel));
+        const f = new Uint8Array(b.fuel); f[c] = 0; b.fuel = f; return { ok: true };
+      }
+      case 'undo': {
+        if (!(A || C)) return no('nothing to undo here');
+        if (a.length !== 1) return no('arguments');
+        const s = b.undo.pop(); if (!s) return no('nothing to undo');
+        // a piece that stays in the tray keeps the way it was turned
+        if (A) b.pieces = (s           ).map((q) => { const cur = b.pieces[q.id]; return !q.placed && cur && !cur.placed ? { ...q, o: cur.o } : { ...q }; });
+        else b.fuel = new Uint8Array(s              );
+        return { ok: true };
+      }
+      case 'toggle': {
+        if (!P) return no('not a probe');
+        if (a.length !== 2 || !cellOk(b, a[1])) return no('arguments');
+        if (b.strikes.length !== 1) return no('the change comes after the first outcome');
+        const c = a[1]          ; if (b.sc.cells[c] !== E.SNOW) return no('not snow');
+        if (b.edit && b.edit.cell !== c) return no('only one square may change');
+        const f = new Uint8Array(b.fuel); f[c] = f[c] ? 0 : 1; b.fuel = f;
+        b.edit = b.edit ? null : { cell: c, add: !!f[c] };
+        return { ok: true };
+      }
+      case 'strike': {
+        if (a.length !== 2) return no('arguments');
+        const pr = a[1];
+        if (pr !== null) {
+          if (!Array.isArray(pr)) return no('bad prediction');
+          for (let k = 0; k < pr.length; k++) if (!isInt(pr[k]) || pr[k] < 0 || pr[k] >= b.sc.homes.length || (k > 0 && pr[k] <= pr[k - 1])) return no('bad prediction');
+        }
+        if (P && b.strikes.length >= 2) return no('both probe outcomes already shown');
+        if (P && b.strikes.length === 1 && !b.edit) return no('the change comes first');
+        const fuel = fuelOf(b);
+        const r = E.burn(b.sc, fuel);
+        const st         = { fuel: E.fuelList(fuel), warm: r.warm, cold: r.cold, success: r.success, steps: r.steps, predicted: pr === null ? null : (pr            ).slice(), replay: b.replay };
+        b.strikes.push(st);
+        return { ok: true, strike: st };
+      }
+      case 'replay': {
+        if (P) return no('not in probes');
+        if (a.length !== 1) return no('arguments');
+        if (!b.strikes.some((s) => s.success && s.replay === b.replay)) return no('replay comes after a success');
+        b.replay++; b.undo = [];
+        if (A) b.pieces.forEach((p) => { p.placed = false; p.o = 0; p.x = 0; p.y = 0; });
+        if (C) b.fuel = E.emptyFuel(b.sc);
+        return { ok: true };
+      }
+      case 'end': {
+        if (a.length !== 2 || typeof a[1] !== 'string' || !OUTCOMES.includes(a[1])) return no('bad outcome');
+        if (a[1] === 'solved' && !b.strikes.some((s) => s.success)) return no('not solved');
+        if ((a[1] === 'probe') !== P) return no('probe outcome only in probes');
+        b.outcome = a[1]; return { ok: true };
+      }
+      default: return no('unknown action ' + name);
+    }
+  }
+
+  /** Canonical state: everything the board and its outcomes depend on, in a fixed order. */
+  function canonical(b       )          {
+    return {
+      v: SCHEMA, ruleset: E.RULESET, sid: b.sid, sceneHash: b.sceneHash, cond: b.cond,
+      pieces: b.cond === 'A' ? b.pieces.map((p) => [p.id, p.type, p.o, p.placed ? 1 : 0, p.placed ? p.x : -1, p.placed ? p.y : -1]) : null,
+      fuel: E.fuelList(fuelOf(b)),
+      edit: b.edit ? b.edit.cell : -1,
+      strikes: b.strikes.map((s) => [s.fuel.join(','), s.warm.join(','), s.predicted === null ? null : s.predicted.join(','), s.success ? 1 : 0, s.replay]),
+      replay: b.replay, actions: b.n, outcome: b.outcome,
+    };
+  }
+  function stateHash(b       )         { return H.sha256Hex(JSON.stringify(canonical(b))); }
+  /** Hash of the action list itself (times excluded). */
+  function logHash(actions          )         { return H.sha256Hex(JSON.stringify(actions)); }
+
+  /** Rebuild a board from its log. Stops at the first refused action. */
+  function replayLog(sc       , cond      , sid        , sceneHash        , laid          , actions          )                                                     {
+    const b = newBoard(sc, cond, sid, sceneHash, laid);
+    for (let k = 0; k < actions.length; k++) {
+      const r = apply(b, actions[k]);
+      if (!r.ok) return { board: b, error: 'action ' + k + ' (' + JSON.stringify(actions[k]) + ') refused: ' + r.reason, at: k };
+    }
+    return { board: b, error: null, at: actions.length };
+  }
+
+  return { SCHEMA, UNDO_CAP, newBoard, occupancy, fuelOf, boardTurn, strokePaint, apply, canonical, stateHash, logHash, replayLog, sideBySide };
+})(
+  typeof module === 'object' && module ? (require('./engine.ts')          ) : (globalThis       ).FLE,
+  typeof module === 'object' && module ? (require('./sha256.ts')             ) : (globalThis       ).FLHash,
+);
+                                
+
+if (typeof module === 'object' && module && module.exports) module.exports = FLM;
+else (globalThis       ).FLM = FLM;
+</script>
+<script>/*
+ * Shared page basics: address flags, timing constants, the frozen participant text, and small DOM helpers.
+ * HOSTED BUILD (FL-1-R1-H1): only the ui_hosted module talks to the network (the receiver, after consent);
+ * the Content-Security-Policy allows the receiver's two hosts and nothing else. Conditions: A = place pieces, B = ready-made path, C = draw the path.
+ * Every Preview, burn and result calls FLE.burn() on the same final fuel set.
+ * One of the page modules (load order: ui_common, ui_record, ui_render, ui_preview, ui_input, ui_scene, ui_testhooks, ui_flow). Modules share
+ * nothing but window.FL1R1_UI: functions from another module are called through it when they run, constants
+ * come from modules loaded earlier, and the shared state (RUN, FLOW, stepIdx, FROZEN, T0) lives on it.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = (W.FL1R1_UI = {})       ;
+  U.RUN = null; // the scene or probe on screen (ui_scene)
+  U.FLOW = []; U.stepIdx = 0; // the participant flow and its current step (ui_flow)
+  const ev = (...a       ) => U.ev(...a);
+  const FLE = W.FLE, FLM = W.FLM, DATA = W.FL1R1_SCENES, BUILD = W.FL1R1_BUILD;
+  const QS = (() => { const q = new URLSearchParams(location.search), s = q.get('slot'); return new URLSearchParams(s === null ? '' : 'slot=' + encodeURIComponent(s)); })(); // hosted: the address steers the slot only; test, dev, fast, resume and motion flags are ignored
+  const TEST = QS.get('test') === '1';
+  const DEV = TEST || QS.get('dev') === '1';
+  const FAST = TEST && QS.get('fast') === '1';
+  const RESUME = !TEST || QS.get('resume') === '1'; // tests opt in to resuming with &resume=1
+  const STEP_MS = FAST ? 8 : 140;
+  const TAIL_MS = FAST ? 20 : 650;
+  const SKIP_AFTER_MS = 150000, SKIP_AFTER_TRIES = 4, TEACH_SKIP_MS = 90000, TEACH_SKIP_TRIES = 3;
+  const BLOCK_ALLOWANCE_MS = 9 * 60000;
+  const STORE_KEY = 'fl1r1-progress';
+  const SAVE_EVERY_TICKS = 8; // 8 x 250 ms: the running scene is saved at least every 2 s
+  const REFUSAL_MS = 700; // how long a refused-stroke mark stays on the square
+  // reduced motion (the phone's setting, or &motion=reduce): no flicker and no shake; the burn still advances
+  // one wave per step at the same speed in every version, so outcome timing does not change
+  const REDUCED = QS.get('motion') === 'reduce' || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const IDLE_MS = 10000; // visible time with no touch for longer than this counts as idle
+  const PTR_CAP = 4000; // pointer entries kept per scene
+
+  /* ------------------------------------------------------------------ text (frozen) */
+  // the three conditions are defined in the scene file (src/scenes.json "conditions")
+  const COND = DATA.conditions;
+  const TXT = {
+    teachHint: {
+      A: 'Drag a piece onto the snow. <b>Tap a piece to turn it.</b>',
+      B: 'Check the path, then tap <b>Strike</b>.',
+      C: 'Drag across the snow to lay fuel. <b>Tap fuel to remove it.</b>',
+    },
+    previewLine: 'Hold <b>Preview</b> to see what will burn.',
+    mainHint: {
+      A: 'Build a path of fuel from the fire to every home.',
+      B: 'Check the path, then strike.',
+      C: 'Draw a path of fuel from the fire to every home.',
+    },
+    predict: 'What do you think will happen? Tap the homes you think will warm, then tap <b>Strike</b>.',
+    success: 'Every home is warm.',
+    miss: 'Not every home is warm.',
+    replay: 'Play this board again',
+    noMore: 'No fuel left — tap fuel to remove some.',
+    refused: 'Fuel goes square by square over snow: go round rocks, homes and the fire.',
+    dropFail: 'A piece only fits on empty snow.',
+    turnFail: 'No room to turn it here.',
+    timeUp: 'Time for this version is up.',
+    probePredict: 'What do you think will happen? Tap the homes you think will warm, then tap <b>Done</b>.',
+    probeEdit: 'What change would alter it? Change <b>one</b> square: tap snow to add fuel, or tap fuel to remove it.',
+    bTap: 'This path is already built: hold <b>Preview</b> to check it, then tap <b>Strike</b>.',
+    probeRepredict: 'What do you think will happen now? Tap the homes you think will warm, then tap <b>Done</b>.',
+    why: 'Why did that happen?',
+  };
+
+  const app = (document.getElementById('app')               );
+  /* ------------------------------------------------------------------ helpers */
+  function h(tag        , attrs      , ...kids       )              {
+    const e = document.createElement(tag);
+    if (attrs) for (const k of Object.keys(attrs)) {
+      if (k === 'class') e.className = attrs[k];
+      else if (k === 'html') e.innerHTML = attrs[k];
+      else if (k.startsWith('on')) e.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] !== false && attrs[k] != null) e.setAttribute(k, attrs[k]);
+    }
+    for (const kid of kids.flat()) if (kid != null) e.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+    return e;
+  }
+  function clear() { app.innerHTML = ''; }
+  function sheet(...kids) { clear(); const s = h('div', { class: 'sheet' }, ...kids); app.append(s); s.scrollTop = 0; return s; }
+  function condLabel(c) { return COND[c].sym + ' ' + COND[c].name; }
+
+  function likert(id, label, lo, hi, store) {
+    const wrap = h('div', { class: 'card' }, h('div', null, label));
+    const row = h('div', { class: 'likert', role: 'radiogroup', 'aria-label': label });
+    for (let v = 1; v <= 7; v++) {
+      const b = h('button', { type: 'button', 'data-v': v, onclick: () => { store[id] = v; [...row.children].forEach((x) => x.classList.toggle('sel', x === b)); ev('likert', [id, v]); } }, String(v));
+      row.append(b);
+    }
+    wrap.append(row, h('div', { class: 'ends' }, h('span', null, lo), h('span', null, hi)));
+    return wrap;
+  }
+  function textQ(id, label, store, required          ) {
+    const ta = (h('textarea', { 'data-q': id, maxlength: '600', 'aria-label': label })                       );
+    ta.addEventListener('input', () => { store[id] = ta.value; });
+    return h('div', { class: 'card' }, h('div', null, label + (required ? '' : ' (optional)')), ta);
+  }
+  function validText(s) { return typeof s === 'string' && s.trim().length >= 2; }
+
+  Object.assign(U, { FLE, FLM, DATA, BUILD, QS, TEST, DEV, RESUME, STEP_MS, TAIL_MS, SKIP_AFTER_MS, SKIP_AFTER_TRIES, TEACH_SKIP_MS, TEACH_SKIP_TRIES, BLOCK_ALLOWANCE_MS, STORE_KEY, SAVE_EVERY_TICKS, REFUSAL_MS, REDUCED, IDLE_MS, PTR_CAP, COND, TXT, app, h, clear, sheet, condLabel, likert, textQ, validText });
+})();
+</script>
+<script>/*
+ * Instrumentation: the session record, events, errors, the pointer log, and where progress is kept for a reload.
+ * One of the page modules (load order: ui_common, ui_record, ui_render, ui_preview, ui_input, ui_scene, ui_testhooks, ui_flow). Modules share
+ * nothing but window.FL1R1_UI: functions from another module are called through it when they run, constants
+ * come from modules loaded earlier, and the shared state (RUN, FLOW, stepIdx, FROZEN, T0) lives on it.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL1R1_UI;
+  const { BUILD, DATA, DEV, FLE, PTR_CAP, REDUCED, STORE_KEY, TEST } = U;
+  const cellAt = (...a       ) => U.cellAt(...a);
+  const deviceLine = (...a       ) => U.deviceLine(...a);
+  const liveState = (...a       ) => U.liveState(...a);
+  const updateG3 = (...a       ) => U.updateG3(...a);
+  /* ------------------------------------------------------------------ progress kept for a reload */
+  /**
+   * Hosted page: the session is kept in local storage of the study's own origin, so reopening the original link in this
+   * browser resumes it after the tab was closed; ui_hosted uploads it to the receiver. If storage is refused, the tab's
+   * window name is used (ui_hosted then stops before consent: the study needs storage).
+   */
+  const STORE = (() => {
+    try {
+      const k = STORE_KEY + '-check'; localStorage.setItem(k, '1'); localStorage.removeItem(k);
+      return { kind: 'local', get: ()                => localStorage.getItem(STORE_KEY), set: (v        ) => localStorage.setItem(STORE_KEY, v) };
+    } catch (e) {
+      const P = STORE_KEY + ':';
+      return { kind: 'tab', get: ()                => (String(window.name || '').startsWith(P) ? String(window.name).slice(P.length) : null), set: (v        ) => { window.name = P + v; } };
+    }
+  })();
+
+  /* ------------------------------------------------------------------ record */
+  U.T0 = Date.now(); // absolute time base; a resumed session keeps the original one
+  /** An anonymous random session id (mandate §10): it identifies the session record, nothing else. */
+  function newSessionId() {
+    try { const a = new Uint8Array(8); crypto.getRandomValues(a); return Array.from(a, (x) => x.toString(16).padStart(2, '0')).join(''); }
+    catch (e) { return Math.floor(Math.random() * 2 ** 52).toString(16).padStart(13, '0'); }
+  }
+  const REC      = {
+    schema: 'fl1r1-record-3', build: BUILD.id, ruleset: FLE.RULESET, scenesHash: DATA.scenesHash, session: newSessionId(),
+    mode: TEST ? 'test' : DEV ? 'dev' : 'owner-local', slot: null, order: null, rot: null, sets: null, display: null,
+    t0: U.T0, startedAt: new Date(U.T0).toISOString(), device: deviceInfo(), steps: [], scenes: [], probes: [], cur: null,
+    answers: {}, ranking: null, topPlay: null, g3: null, completed: false, resumes: [], errors: [], events: [],
+  };
+  /** A new slot session always starts from an empty record (owner free play beforehand leaves no trace in it). */
+  function resetRecord() {
+    U.T0 = Date.now();
+    Object.assign(REC, { session: newSessionId(), slot: null, order: null, rot: null, sets: null, display: null, t0: U.T0, startedAt: new Date(U.T0).toISOString(), steps: [], scenes: [], probes: [], cur: null,
+      answers: {}, ranking: null, topPlay: null, g3: null, completed: false, resumes: [], errors: [], events: [] });
+    delete REC.consent; delete REC.finishedAt;
+  }
+  function now() { return Date.now() - U.T0; }
+  function ev(type        , data      ) { REC.events.push([now(), type, data === undefined ? 0 : data]); }
+  /** Coarse device facts only: no model name and no full browser string. */
+  function deviceInfo() {
+    const ua = navigator.userAgent || '';
+    const m = (re) => { const r = ua.match(re); return r ? r[1] : null; };
+    const and = m(/Android (\d+)/), ios = m(/(?:iPhone|iPad|iPod).*? OS (\d+)_/);
+    const os = and ? 'Android ' + and : ios ? 'iOS ' + ios : /Windows/.test(ua) ? 'Windows' : /CrOS/.test(ua) ? 'ChromeOS' : /Mac OS X/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : 'other';
+    const edg = m(/Edg[A-Za-z]*\/(\d+)/), sam = m(/SamsungBrowser\/(\d+)/), ff = m(/(?:Firefox|FxiOS)\/(\d+)/), cr = m(/(?:Chrome|CriOS)\/(\d+)/), sf = m(/Version\/(\d+)[\d.]* (?:Mobile\/\S+ )?Safari/);
+    const browser = edg ? 'Edge ' + edg : sam ? 'Samsung Internet ' + sam : ff ? 'Firefox ' + ff : cr ? 'Chrome ' + cr : sf ? 'Safari ' + sf : 'other';
+    return { vw: innerWidth, vh: innerHeight, dpr: devicePixelRatio || 1, touch: 'ontouchstart' in window || navigator.maxTouchPoints > 0, os, browser, reducedMotion: REDUCED, store: STORE.kind }                       ;
+  }
+  // Chrome's reduced browser string freezes the Android version; ask for the real OS version only (no model)
+  try {
+    const uad = (navigator       ).userAgentData;
+    // stored with the next regular save (never saved on its own, so a finished record is never rewritten)
+    if (uad && uad.getHighEntropyValues) uad.getHighEntropyValues(['platformVersion']).then((v) => {
+      REC.device.platform = v.platform; REC.device.platformVersion = v.platformVersion;
+      const el = document.getElementById('deviceLine'); if (el) el.textContent = deviceLine();
+    }, () => {});
+  } catch (e) { /* not available */ }
+  /** Errors are kept as categories with the step and scene, never as raw messages. */
+  function logError(cat) {
+    try {
+      if (!REC.errors) REC.errors = [];
+      if (REC.errors.length < 50) REC.errors.push([now(), cat, U.FLOW[U.stepIdx] ? U.FLOW[U.stepIdx].kind : '', U.RUN && U.RUN.def ? U.RUN.def.id : '']);
+      ev('error', cat); save();
+    } catch (e) { /* never let logging break the page */ }
+  }
+  addEventListener('error', () => logError('script-error'));
+  addEventListener('unhandledrejection', () => logError('promise-rejection'));
+  // leaving and returning is logged on every screen, not only during scenes (until the record is final)
+  document.addEventListener('visibilitychange', () => { if (U.FROZEN) return; ev('vis', document.visibilityState); if (U.RUN) U.RUN.lastTick = performance.now(); save(); });
+  /** After "All done" or "I do not agree" the stored record is final: nothing more is written. */
+  U.FROZEN = false;
+  function freezeRecord() { save(); U.FROZEN = true; }
+  function save() {
+    if (U.FROZEN) return;
+    if (U.RUN && !U.RUN.dead && !U.RUN.ended) { U.RUN.rec.live = liveState(U.RUN); if (U.RUN.st.g3) updateG3(U.RUN); }
+    try { STORE.set(JSON.stringify({ rec: REC, stepIdx: U.stepIdx, slot: REC.slot })); } catch (e) { /* storage refused: play continues */ }
+  }
+
+  function storedSession() { try { return JSON.parse(STORE.get() || 'null'); } catch (e) { return null; } }
+  /** Pointer log (mandate §10): down, cell changes while held, up, cancel, extra finger; the board square under the finger. */
+  function plog(run, type, p) {
+    const c = cellAt(run, p.x, p.y);
+    run.lastInput = performance.now();
+    if (type === 'm' && c === run.lastPtrCell) return;
+    run.lastPtrCell = type === 'u' || type === 'c' ? -2 : c;
+    const L = run.rec.ptr; if (L && L.length < PTR_CAP) L.push([Math.round(now()), type, c]);
+  }
+
+  Object.assign(U, { STORE, REC, resetRecord, now, ev, logError, freezeRecord, save, storedSession, plog });
+})();
+</script>
+<script>/*
+ * Hosted study shell (FL-1-R1-H1). In the hosted participant page only, never in the C2 review page. It adds what the
+ * hosted stage needs around the unchanged C2 game and flow, and nothing else:
+ *   - the Android Google Chrome gate, before consent and again at "I agree" (nothing is stored or sent for a refused browser);
+ *   - the invitation credential taken from the link fragment (the page's first script moves it out of the address);
+ *   - at "I agree", this browser's session {gs, rc} and the first record, whose verified receipt binds the invitation and
+ *     must arrive before the touch check begins (the receiver checks slot, order, rotation and lists against the frozen table);
+ *   - the record uploaded at every step and scene end, every few seconds after the completion code is shown, when the page
+ *     is hidden, and as the final record at Finish; each upload counts only when the readback returns its exact digest;
+ *   - the completion code shown where the C2 page showed TEST-ONLY, only after the receiver verified a completed record;
+ *   - one tab at a time per browser; progress kept in this origin's local storage so the original link resumes it.
+ * Loaded after ui_record and before the game modules; the C2 flow calls it at four hook points (hosted/patches.json).
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL1R1_UI;
+  const CFG = W.FL1H1_CONFIG || {};
+  const { REC, h, sheet } = U;
+  const sha = (s        )         => W.FLHash.sha256Hex(s);
+  const ORIG = W.__fl1h1 || { hash: '', href: '' };
+  try { delete W.__fl1h1; } catch (e) { W.__fl1h1 = undefined; }
+  const K_CRED = 'fl1h1-k', K_GRANT = 'fl1h1-g', K_META = 'fl1h1-m', K_OUT = 'fl1h1-o', K_LOCK = 'fl1h1-lock', K_TAB = 'fl1h1-tab';
+  const CRED = /^[A-Za-z0-9_-]{43}$/;
+  const HARD = ['no_credential', 'bad_credential', 'unknown_credential', 'bad_session', 'claim_conflict', 'session_conflict', 'session_limit',
+    'no_session', 'sid_conflict', 'bad_build', 'after_final'];
+  REC.mode = 'hosted';
+  REC.hosted = { v: 'fl1h1-1' };
+
+  /* ------------------------------------------------------------------ storage */
+  const js = (s) => { try { return s ? JSON.parse(s) : null; } catch (e) { return null; } };
+  const lsGet = (k) => { try { return js(localStorage.getItem(k)); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+  const lsDel = (k) => { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } };
+  const ssGet = (k) => { try { return sessionStorage.getItem(k); } catch (e) { return null; } };
+  const ssSet = (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) { /* ignore */ } };
+  const ssDel = (k) => { try { sessionStorage.removeItem(k); } catch (e) { /* ignore */ } };
+  function capable() {
+    try {
+      const t = 'fl1h1-t'; localStorage.setItem(t, '1'); localStorage.removeItem(t); sessionStorage.setItem(t, '1'); sessionStorage.removeItem(t);
+      return !!(W.crypto && W.crypto.getRandomValues && W.fetch);
+    } catch (e) { return false; }
+  }
+  function bytes(n) { const a = new Uint8Array(n); W.crypto.getRandomValues(a); return a; }
+  const hex = (n) => Array.from(bytes(n), (b) => b.toString(16).padStart(2, '0')).join('');
+  const b64url = (n) => btoa(String.fromCharCode.apply(null, Array.from(bytes(n)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  /* ------------------------------------------------------------------ state */
+  const ST      = { k: null, vfp: null, meta: null, active: false, owner: false, lastStep: -1, lastN: -1, lastBody: null, flushing: false, again: false,
+    retryT: null, retryMs: 2000, codeEls: [], doneEls: [], completeAt: null, finalAt: null, failing: false, timer: null, tab: null, lockT: null };
+  const saveMeta = () => lsSet(K_META, ST.meta);
+  function grant() { const g = lsGet(K_GRANT) || js(ssGet(K_GRANT)); return g && g.vfp === ST.vfp && /^[0-9a-f]{32}$/.test(g.gs) && CRED.test(g.rc) ? g : null; }
+  function clearLocal() { [K_META, K_OUT, K_GRANT, U.STORE_KEY].forEach(lsDel); ssDel(K_GRANT); }
+  function forget() { ssDel(K_CRED); ST.k = null; }
+
+  /* ------------------------------------------------------------------ eligibility gate (as accepted for Firestorm CV-1R) */
+  /** Only the Google Chrome app on an Android phone: the browser string AND the browser's own client hints must both say so. */
+  function androidChrome() {
+    const ua = navigator.userAgent || '', d = (navigator       ).userAgentData || null;
+    const brands = d && d.brands ? d.brands.map((b) => String(b.brand)) : [];
+    const uaOk = /Android/.test(ua) && /Mobile/.test(ua) && /Chrome\/\d+/.test(ua) &&
+      !/SamsungBrowser|EdgA|Edg\/|OPR\/|OPT\/|Opera|Firefox|FxiOS|CriOS|YaBrowser|UCBrowser|MiuiBrowser|HeyTap|Vivaldi|DuckDuckGo|; wv\)|Version\/\d/.test(ua);
+    const hintsOk = !!d && d.mobile === true && d.platform === 'Android' && brands.indexOf('Google Chrome') >= 0;
+    return uaOk && hintsOk;
+  }
+
+  /* ------------------------------------------------------------------ screens shown before or instead of the study */
+  function refuseBrowser(link) {
+    const kids        = [h('h1', null, 'Please open this study in Google Chrome'),
+      h('p', null, 'This study works only in the Google Chrome app on an Android phone. Nothing has been recorded, and your study link has not been used.')];
+    if (link) {
+      const status = h('p', { class: 'small', id: 'copyStatus' });
+      kids.push(h('button', { class: 'primary', id: 'copyLink', style: 'width:100%', onclick: () => copyLink(link, status) }, 'Copy my study link'), status,
+        h('p', null, 'Then open the Google Chrome app, paste the link into the address bar and open it.'));
+    }
+    kids.push(h('p', null, 'Or go back to Prolific and open your study link again in the Google Chrome app. Chrome’s “Desktop site” option must be off.'),
+      h('p', null, 'If you cannot use Google Chrome on an Android phone, please return the study on Prolific.'));
+    sheet(...kids);
+  }
+  function copyLink(link, status) {
+    const fallback = () => {
+      status.textContent = 'Copy your link from this box:';
+      const box = (h('input', { type: 'text', readonly: 'readonly', value: link, style: 'width:100%;font-size:14px', 'aria-label': 'Your study link' })                    );
+      status.after(box); box.focus(); box.select();
+    };
+    try { navigator.clipboard.writeText(link).then(() => { status.textContent = 'Copied.'; }, fallback); } catch (e) { fallback(); }
+  }
+  function cannotRun() { sheet(h('h1', null, 'This browser cannot run the study'), h('p', null, 'Please go back to Prolific and open your study link again in the Google Chrome app.')); }
+  function reopen() { sheet(h('h1', null, 'Please reopen your study link'), h('p', null, 'This link does not match the study that is in progress in this browser. Please go back to Prolific and open your original study link.')); }
+  function otherTab() { sheet(h('h1', null, 'This study is open in another tab'), h('p', null, 'Please continue in the other tab. If you have closed it, wait a few seconds and reload this page.')); }
+  function starting() { sheet(h('h1', null, 'Starting…'), h('p', null, 'Connecting to the study. This takes a few seconds.')); }
+  function stopped(code) {
+    if (code === 'session_conflict') { sheet(h('h1', null, 'This study link is already in use'), h('p', null, 'It was started in another browser or on another device. Please continue there. If that was not you, please message the researcher through Prolific.')); return; }
+    if (code === 'unknown_credential' || code === 'bad_credential' || code === 'no_credential') { sheet(h('h1', null, 'This link is not valid.'), h('p', null, 'Please go back to the study page and use the link you were given.')); return; }
+    sheet(h('h1', null, 'Something went wrong'), h('p', null, 'The study could not be started (' + code + '). Nothing more will be sent. Please message the researcher through Prolific; genuine participation is paid.'));
+  }
+  let startTries = 0;
+  function couldNotStart(next) {
+    startTries++;
+    const kids        = [h('h1', null, 'Could not start yet'), h('p', null, 'Please check your connection and try again.'),
+      h('button', { class: 'primary', id: 'startAgain', style: 'width:100%', onclick: () => agree(next) }, 'Try again')];
+    if (startTries >= 2) kids.push(h('p', { class: 'small' }, 'If this keeps happening, please return the study on Prolific or message the researcher through Prolific.'));
+    sheet(...kids);
+  }
+
+  /* ------------------------------------------------------------------ one tab at a time in this browser */
+  // Progress is kept in this origin's local storage, which every tab of the browser shares: only the tab that holds the
+  // lock and runs the study writes it (a refused, waiting or invalid tab never does), and a tab that finds the lock taken
+  // by another tab (after its own timers were paused in the background) stops and says so.
+  const baseStoreSet = U.STORE.set;
+  U.STORE.set = function (v) { if (ST.owner) return baseStoreSet(v); };
+  const heldByOther = () => { const l = lsGet(K_LOCK); return !!(l && l.id !== ST.tab && Date.now() - l.t < 4000); };
+  function unlock() { if (ST.lockT) { clearInterval(ST.lockT); ST.lockT = null; } const m = lsGet(K_LOCK); if (m && m.id === ST.tab) lsDel(K_LOCK); }
+  function lostLock() {
+    unlock(); ST.owner = false; ST.active = false; U.FROZEN = true;
+    try { if (U.teardownScene) U.teardownScene(); } catch (e) { /* ignore */ }
+    otherTab();
+  }
+  function lock() {
+    ST.tab = ssGet(K_TAB) || hex(8); ssSet(K_TAB, ST.tab);
+    if (heldByOther()) return false;
+    const beat = () => { if (heldByOther()) { lostLock(); return; } lsSet(K_LOCK, { id: ST.tab, t: Date.now() }); };
+    lsSet(K_LOCK, { id: ST.tab, t: Date.now() }); ST.lockT = setInterval(beat, 1000);
+    addEventListener('pagehide', unlock);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && ST.lockT) beat(); });
+    return true;
+  }
+  /** A tab that does not run the study (refused, waiting, invalid) keeps nothing: the record is frozen in memory. */
+  function idle(r) { ST.owner = false; U.FROZEN = true; return r; }
+
+  /* ------------------------------------------------------------------ admission (the C2 boot asks this first) */
+  function admit() {
+    const m = /^#k=([A-Za-z0-9_-]{43})$/.exec(ORIG.hash || '');
+    if (!androidChrome()) { ssDel(K_CRED); refuseBrowser(m ? ORIG.href : null); return idle('refused'); }
+    if (!capable()) { cannotRun(); return idle('refused'); }
+    let k = m ? m[1] : null;
+    if (k) ssSet(K_CRED, k); else k = ssGet(K_CRED);
+    const slot = U.QS.get('slot');
+    if (!k || !CRED.test(k) || slot === null) return idle('nocred');
+    ST.k = k; ST.vfp = sha('fl1h1-credential-v1:' + k).slice(0, 16);
+    if (!lock()) { otherTab(); return idle('refused'); }
+    const meta = lsGet(K_META);
+    if (meta && meta.vfp !== ST.vfp) clearLocal();       // another invitation's leftovers in this browser (no other tab runs it: this tab holds the lock)
+    else {
+      const prog = U.storedSession();
+      if (prog && prog.slot && prog.slot !== slot && meta) { unlock(); reopen(); return idle('refused'); }
+    }
+    ST.owner = true;
+    ST.meta = lsGet(K_META) || { vfp: ST.vfp, sid: null, seq: 0, okSeq: 0, code: null, test: null, final: false };
+    if (ST.meta.okSeq > 0 && grant()) { ST.active = !ST.meta.final; ST.lastBody = null; }
+    if (ST.active) setTimeout(flush, 0);
+    return 'ok';
+  }
+
+  /* ------------------------------------------------------------------ upload, receipt, readback */
+  function auth() { const g = grant(); return ST.k && g ? { k: ST.k, gs: g.gs, rv: sha('fl1h1-readback-v1:' + g.rc) } : null; }
+  function envelope(e, a) {
+    return JSON.stringify({ q: 'FL1H1', v: 1, sid: e.sid, seq: e.seq, final: e.final, digest: e.digest, body: e.body, auth: a })
+      .replace(/[\u007f-￿]/g, (c) => '\\u' + ('000' + c.charCodeAt(0).toString(16)).slice(-4));
+  }
+  /** The current record as the next record of the stream (always seq 1 until the first record is verified). */
+  function enqueue(final) {
+    const body = JSON.stringify(REC);
+    const seq = ST.meta.okSeq === 0 ? 1 : Math.max(ST.meta.seq, ST.meta.okSeq) + 1;
+    ST.meta.seq = seq; ST.meta.sid = REC.session; saveMeta();
+    const e = { sid: REC.session, seq, final: !!final, body, digest: sha(body) };
+    lsSet(K_OUT, e); ST.lastBody = body;
+    flush();
+    return e;
+  }
+  async function timed(url, init, ms) {
+    const ac = typeof AbortController === 'function' ? new AbortController() : null;
+    const t = ac ? setTimeout(() => ac.abort(), ms) : null;
+    try { const r = await fetch(url, Object.assign({}, init, ac ? { signal: ac.signal } : {})); return await r.json(); }
+    catch (e) { return null; } finally { if (t) clearTimeout(t); }
+  }
+  function readback(sid) {
+    const g = grant(); if (!g) return Promise.resolve(null);
+    const u = CFG.receiver + (CFG.receiver.indexOf('?') < 0 ? '?' : '&') + 'op=receipt&rs=' + sid + '&gs=' + g.gs + '&rc=' + g.rc;
+    return timed(u, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' }, 12000);
+  }
+  const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+  async function deliver(e) {
+    const a = auth(); if (!a) return { ok: false, why: 'no_auth' };
+    const env = envelope(e, a);
+    const resp = await timed(CFG.receiver, { method: 'POST', mode: 'cors', cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: env, keepalive: env.length < 60000 }, 30000);
+    if (resp && resp.ok === false && HARD.indexOf(resp.error) >= 0) return { ok: false, why: resp.error, hard: true };
+    for (let i = 0; i < 3; i++) {
+      const r = await readback(e.sid);
+      if (r && r.ok === true && r.sid === e.sid) {
+        if (r.seq === e.seq && r.digest === e.digest && r.final === e.final) return { ok: true, r };
+        if (r.final && !(e.final && r.seq === e.seq)) return { ok: false, why: 'closed', hard: true };
+        if (r.seq >= e.seq) return { bump: r.seq + 1 };
+        return { ok: false, why: 'not_stored' };
+      }
+      if (r && r.ok === false && (r.error === 'unauthorized' || r.error === 'not_found')) return { ok: false, why: resp && resp.ok === false ? resp.error : r.error };
+      await pause(800);
+    }
+    return { ok: false, why: 'no_readback' };
+  }
+  /** Delivers the outbox (one entry: the newest record), one delivery at a time; a caller awaits the run in progress. */
+  let inflight = null;
+  function flush() {
+    if (inflight) { ST.again = true; return inflight; }
+    if (!CFG.receiver || !ST.meta || !auth()) return Promise.resolve(null);
+    inflight = run().finally(() => { inflight = null; });
+    return inflight;
+  }
+  async function run() {
+    ST.flushing = true;
+    let res = null;
+    try {
+      do {
+        ST.again = false;
+        let e = lsGet(K_OUT);
+        if (!e || e.seq <= ST.meta.okSeq) { lsDel(K_OUT); break; }
+        res = await deliver(e);
+        if (res.bump) {                              // the receiver holds this sequence number already: resend the newest record above it
+          const body = JSON.stringify(REC);
+          e = { sid: e.sid, seq: res.bump, final: e.final, body, digest: sha(body) };
+          ST.meta.seq = res.bump; saveMeta(); lsSet(K_OUT, e); ST.lastBody = body; ST.again = true; continue;
+        }
+        if (res.ok) {
+          ST.meta.okSeq = e.seq;
+          if (res.r.code) { ST.meta.code = res.r.code; ST.meta.test = !!res.r.test; ST.meta.noCode = false; }
+          else if (res.r.completed && res.r.noCode && !ST.meta.code) ST.meta.noCode = true;
+          if (e.final) ST.meta.final = true;
+          saveMeta();
+          const cur = lsGet(K_OUT); if (cur && cur.seq <= e.seq) lsDel(K_OUT);
+          ST.failing = false; ST.retryMs = 2000;
+          if (e.final) finished();
+        } else break;
+      } while (ST.again);
+    } finally { ST.flushing = false; }
+    if (res && !res.ok && !res.bump) {
+      ST.failing = true;
+      if (!res.hard && !ST.retryT) { ST.retryT = setTimeout(() => { ST.retryT = null; flush(); }, ST.retryMs); ST.retryMs = Math.min(30000, ST.retryMs * 2); }
+    }
+    paint();
+    return res;
+  }
+  /** After the verified final: the session's capability and the record's local copy are no longer needed in this browser.
+   *  The invitation stays in this tab's session storage only, so a reload of the tab shows "All done" and the code again. */
+  function finished() {
+    ST.active = false;
+    try {
+      const done = { rec: { slot: REC.slot, order: REC.order, rot: REC.rot, sets: REC.sets, display: REC.display, pairs: REC.pairs, session: REC.session,
+        consent: REC.consent, completed: REC.completed, finishedAt: REC.finishedAt, mode: REC.mode }, stepIdx: U.stepIdx, slot: REC.slot };
+      localStorage.setItem(U.STORE_KEY, JSON.stringify(done));
+    } catch (e) { /* ignore */ }
+    lsDel(K_GRANT); ssDel(K_GRANT);
+  }
+
+  /* ------------------------------------------------------------------ hook points called by the C2 flow */
+  /** "I agree": the gate again, this browser's session, the first record; the touch check begins only after its verified receipt. */
+  async function agree(next) {
+    if (!androidChrome()) { forget(); refuseBrowser(null); return; }
+    if (!ST.k) { stopped('no_credential'); return; }
+    if (!grant()) { const g = { gs: hex(16), rc: b64url(32), vfp: ST.vfp }; lsSet(K_GRANT, g); ssSet(K_GRANT, JSON.stringify(g)); }
+    starting();
+    enqueue(false);
+    let res = null;
+    for (let i = 0; i < 3; i++) {                                 // the first verified receipt, or a definite refusal
+      res = await flush();
+      if (ST.meta.okSeq > 0 || (res && res.hard)) break;
+      await pause(1500);
+    }
+    if (ST.meta.okSeq > 0) { ST.active = true; ST.lastStep = U.stepIdx; ST.lastN = REC.scenes.length + REC.probes.length; next(); return; }
+    if (res && res.hard) { stopped(res.why); return; }
+    couldNotStart(next);
+  }
+  /** C2's save() runs as before; after it, the record is queued when the step or the number of finished scenes changed. */
+  const baseSave = U.save;
+  U.save = function () {
+    const r = baseSave.apply(this, arguments);
+    try {
+      if (ST.active && !U.FROZEN) {
+        const st = U.stepIdx, n = REC.scenes.length + REC.probes.length;
+        const nowComplete = REC.completed && ST.completeAt === null;    // the completed record goes up at once (the code follows its receipt)
+        if (nowComplete) ST.completeAt = Date.now();
+        if (nowComplete || st !== ST.lastStep || n !== ST.lastN) { ST.lastStep = st; ST.lastN = n; enqueue(false); }
+      }
+    } catch (e) { /* never let the upload break the page */ }
+    return r;
+  };
+  /** Finish freezes the record (C2), then the final record is sent; a decline before any session sends nothing. */
+  const baseFreeze = U.freezeRecord;
+  U.freezeRecord = function () {
+    const r = baseFreeze.apply(this, arguments);
+    try {
+      if (ST.active && REC.finishedAt != null) { ST.finalAt = Date.now(); enqueue(true); }
+      else if (!ST.active && REC.consent && REC.consent.declined) forget();
+    } catch (e) { /* ignore */ }
+    return r;
+  };
+  // after the completion code is shown, and during the optional scene: the record goes up at least every 5 seconds when it changed
+  ST.timer = setInterval(() => {
+    try {
+      if (!ST.active || U.FROZEN || !REC.completed) return;
+      if (JSON.stringify(REC) !== ST.lastBody) enqueue(false);
+      paint();
+    } catch (e) { /* ignore */ }
+  }, 5000);
+  function beacon() {
+    try {
+      if (!ST.active || ST.meta.final) return;
+      let e = lsGet(K_OUT);
+      if (!e && JSON.stringify(REC) !== ST.lastBody) e = enqueue(!!U.FROZEN && REC.finishedAt != null);
+      const a = auth();
+      if (!e || !a) return;
+      const env = envelope(e, a);
+      if (env.length < 60000 && navigator.sendBeacon) navigator.sendBeacon(CFG.receiver, new Blob([env], { type: 'text/plain;charset=utf-8' }));
+    } catch (e) { /* ignore */ }
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') beacon(); else flush(); });
+  addEventListener('pagehide', beacon);
+  addEventListener('online', () => { flush(); });
+
+  /** The completion card's code and line (where the C2 page showed TEST-ONLY), kept up to date. */
+  function codeParts() {
+    const b = h('b', { id: 'ccode' }), s = h('div', { class: 'small', id: 'ccodeNote' });
+    ST.codeEls.push([b, s]); paintCode(b, s);
+    return [b, s];
+  }
+  function paintCode(b, s) {
+    if (ST.meta && ST.meta.code) { b.textContent = ST.meta.code; s.textContent = 'Copy this code into Prolific.'; return; }
+    if (ST.meta && ST.meta.noCode) { b.textContent = 'not available'; s.textContent = 'Your answers are saved, but the code could not be shown. Please message the researcher through Prolific; genuine participation is paid.'; return; }
+    b.textContent = '········';
+    const waited = ST.completeAt ? Date.now() - ST.completeAt : 0;
+    s.textContent = waited > 90000 ? 'Your answers are not saved yet; the page keeps trying. If this does not finish, return to Prolific and message the researcher through Prolific; genuine participation is paid.'
+      : waited > 20000 || ST.failing ? 'Still saving your answers… please keep this page open.' : 'Saving your answers…';
+  }
+  /** After "All done": the code again and whether the final record is saved. */
+  function doneParts() {
+    const c = h('div', { class: 'card', id: 'doneCode' });
+    ST.doneEls.push(c); paintDone(c);
+    return [c];
+  }
+  function paintDone(c) {
+    c.innerHTML = '';
+    if (ST.meta && ST.meta.code) c.append('Completion code: ', h('b', null, ST.meta.code));
+    else if (ST.meta && ST.meta.noCode) c.append(h('div', null, 'The completion code could not be shown. Please message the researcher through Prolific; genuine participation is paid.'));
+    const waited = ST.finalAt ? Date.now() - ST.finalAt : 0;
+    const line = ST.meta && ST.meta.final ? 'Your answers are saved.' : waited > 90000 ? 'Your last answers are not saved yet; the page keeps trying while it is open.' : 'Saving your last answers…';
+    c.append(h('div', { class: 'small' }, line));
+  }
+  function paint() {
+    ST.codeEls = ST.codeEls.filter(([b]) => b.isConnected); ST.codeEls.forEach(([b, s]) => paintCode(b, s));
+    ST.doneEls = ST.doneEls.filter((c) => c.isConnected); ST.doneEls.forEach(paintDone);
+  }
+
+  U.HOSTED = { admit, agree, codeParts, doneParts, androidChrome };
+})();
+</script>
+<script>/*
+ * Renderer: draws the board, the fuel, the burn, Preview and the miss marks on the canvas. It reads the scene and never changes
+ * the board or the record; it only notes what it drew (run.drawn), which the parity test reads.
+ * One of the page modules (load order: ui_common, ui_record, ui_render, ui_preview, ui_input, ui_scene, ui_testhooks, ui_flow). Modules share
+ * nothing but window.FL1R1_UI: functions from another module are called through it when they run, constants
+ * come from modules loaded earlier, and the shared state (RUN, FLOW, stepIdx, FROZEN, T0) lives on it.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL1R1_UI;
+  const { FLE, REDUCED, REFUSAL_MS, STEP_MS } = U;
+  const currentFuel = (...a       ) => U.currentFuel(...a);
+  const dragSnap = (...a       ) => U.dragSnap(...a);
+  const dragTopLeft = (...a       ) => U.dragTopLeft(...a);
+  const oriOf = (...a       ) => U.oriOf(...a);
+  const trayPieceRect = (...a       ) => U.trayPieceRect(...a);
+  const used = (...a       ) => U.used(...a);
+  /* ------------------------------------------------------------------ drawing */
+  const COL = { snow: '#f7f9fb', grid: '#e1e7ec', rock: '#8b939a', fuel: '#b08968', fuelEdge: '#8a6a4f', burnt: '#4b3a2f', home: '#5c6b78', homeWarm: '#9a6b2f',
+    window: '#3a4550', windowWarm: '#ffd43b', fire: '#f06a1d', flame: '#ffd43b', ok: '#2f9e44', bad: '#e03131', cold: '#4a90d9', refuse: '#7048e8' };
+  function rr(ctx, x, y, w, hh, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + hh, r); ctx.arcTo(x + w, y + hh, x, y + hh, r); ctx.arcTo(x, y + hh, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  function draw(run) {
+    if (run.dead || !run.g) return;
+    const ctx = run.el.ctx, g = run.g, C = g.C, sc = run.sc;
+    ctx.clearRect(0, 0, g.cw, g.ch);
+    const fuel = currentFuel(run);
+    const pv = run.preview ? FLE.burn(sc, fuel) : null;
+    const a = run.anim; let step = -1;
+    if (a) step = a.done ? 1e9 : Math.floor((performance.now() - a.start) / STEP_MS);
+    const b = a ? a.b : null;
+    const tnow = performance.now() / 1000;
+    // what this frame shows, as the renderer drew it (read by the parity test)
+    const drawn      = { kind: pv ? 'preview' : b && a.done ? 'result' : 'board', burn: [], noburn: [], warm: [], cold: [], markers: [] };
+    // board
+    rr(ctx, g.bx - 2, g.by - 2, g.bw + 4, g.bh + 4, 8); ctx.fillStyle = '#d5dde3'; ctx.fill();
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 7; x++) {
+      const i = y * 7 + x, px = g.bx + x * C, py = g.by + y * C, t = sc.cells[i];
+      ctx.fillStyle = COL.snow; ctx.fillRect(px, py, C, C);
+      ctx.strokeStyle = COL.grid; ctx.lineWidth = 1; ctx.strokeRect(px + 0.5, py + 0.5, C - 1, C - 1);
+      if (t === FLE.ROCK) { rr(ctx, px + 3, py + 3, C - 6, C - 6, C * 0.18); ctx.fillStyle = COL.rock; ctx.fill(); }
+    }
+    // joints between side-touching fuel squares (and fuel touching the fire or a home): connections are visible
+    const isLit = (i) => b && b.t[i] >= 0 && b.t[i] <= step;
+    const fuelColor = (i) => {
+      if (b && b.t[i] >= 0 && b.t[i] <= step) {
+        const age = step - b.t[i];
+        if (age < 3 && !a.done && !REDUCED) { const f = 0.5 + 0.5 * Math.sin(tnow * 18 + i); return `rgb(${240 + 15 * f | 0},${110 + 70 * f | 0},${30})`; }
+        return COL.burnt;
+      }
+      return COL.fuel;
+    };
+    const jw = C * 0.36;
+    for (let i = 0; i < 56; i++) {
+      if (!fuel[i]) continue;
+      const x = i % 7, y = (i - x) / 7, cx = g.bx + x * C + C / 2, cy = g.by + y * C + C / 2;
+      for (const nb of FLE.neighbors(sc, i)) {
+        const nx = nb % 7, ny = (nb - nx) / 7;
+        const other = fuel[nb] ? 'fuel' : sc.cells[nb] === FLE.SOURCE ? 'src' : sc.cells[nb] === FLE.HOME ? 'home' : null;
+        if (!other || (other === 'fuel' && nb < i)) continue;
+        const ncx = g.bx + nx * C + C / 2, ncy = g.by + ny * C + C / 2;
+        ctx.fillStyle = (isLit(i) && (other !== 'fuel' || isLit(nb))) ? (a.done ? COL.burnt : '#f08c3a') : COL.fuel;
+        const reach = other === 'fuel' ? 1 : 0.62;
+        const ex = cx + (ncx - cx) * reach, ey = cy + (ncy - cy) * reach;
+        if (nx !== x) ctx.fillRect(Math.min(cx, ex), cy - jw / 2, Math.abs(ex - cx), jw);
+        else ctx.fillRect(cx - jw / 2, Math.min(cy, ey), jw, Math.abs(ey - cy));
+      }
+    }
+    // fuel squares
+    for (let i = 0; i < 56; i++) {
+      if (!fuel[i]) continue;
+      const x = i % 7, y = (i - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+      rr(ctx, px + C * 0.14, py + C * 0.14, C * 0.72, C * 0.72, C * 0.14);
+      ctx.fillStyle = fuelColor(i); ctx.fill();
+      if (!b || b.t[i] < 0 || b.t[i] > step) { ctx.strokeStyle = COL.fuelEdge; ctx.lineWidth = 1.5; ctx.stroke(); }
+      if (drawn.kind === 'result') (b.t[i] >= 0 ? drawn.burn : drawn.noburn).push(i);
+    }
+    // A: piece outlines so each piece reads as one object
+    if (run.cond === 'A') {
+      for (const pc of run.pieces) if (pc.placed && !(run.drag && run.drag.id === pc.id && run.drag.active)) outlinePiece(ctx, g, FLE.placementCells(pc.type, pc.o, pc.x, pc.y), 'rgba(60,40,25,.55)');
+    }
+    // fire square
+    {
+      const x = sc.source % 7, y = (sc.source - x) / 7, cx = g.bx + x * C + C / 2, cy = g.by + y * C + C / 2;
+      ctx.beginPath(); ctx.arc(cx, cy, C * 0.38, 0, Math.PI * 2); ctx.fillStyle = COL.fire; ctx.fill();
+      const f = REDUCED ? 1 : 0.85 + 0.15 * Math.sin(tnow * 6); // reduced motion: a still flame
+      ctx.beginPath(); ctx.moveTo(cx, cy - C * 0.26 * f); ctx.quadraticCurveTo(cx + C * 0.2, cy + C * 0.02, cx, cy + C * 0.2); ctx.quadraticCurveTo(cx - C * 0.2, cy + C * 0.02, cx, cy - C * 0.26 * f);
+      ctx.fillStyle = COL.flame; ctx.fill();
+    }
+    // homes
+    sc.homes.forEach((hm, k) => {
+      const x = hm % 7, y = (hm - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+      const warm = b && b.homeT[k] >= 0 && b.homeT[k] <= step;
+      if (warm) { const r = C * (0.62 + (a.done || REDUCED ? 0 : 0.06 * Math.sin(tnow * 8))); ctx.beginPath(); ctx.arc(px + C / 2, py + C / 2, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,207,63,.35)'; ctx.fill(); }
+      drawHome(ctx, px, py, C, warm);
+      if (b && a.done && b.homeT[k] < 0) drawSnowflake(ctx, px + C * 0.82, py + C * 0.2, C * 0.16);
+      if (drawn.kind === 'result') (warm ? drawn.warm : drawn.cold).push(k);
+    });
+    // preview overlay
+    if (pv) {
+      for (let i = 0; i < 56; i++) {
+        if (!fuel[i]) continue;
+        const x = i % 7, y = (i - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+        if (pv.t[i] >= 0) { ctx.strokeStyle = '#ff922b'; ctx.lineWidth = 4; rr(ctx, px + C * 0.1, py + C * 0.1, C * 0.8, C * 0.8, C * 0.16); ctx.stroke(); ctx.fillStyle = 'rgba(255,146,43,.25)'; ctx.fill(); drawn.burn.push(i); }
+        else { ctx.setLineDash([4, 3]); ctx.strokeStyle = '#6b7780'; ctx.lineWidth = 2.5; rr(ctx, px + C * 0.1, py + C * 0.1, C * 0.8, C * 0.8, C * 0.16); ctx.stroke(); ctx.setLineDash([]); drawn.noburn.push(i); }
+      }
+      sc.homes.forEach((hm, k) => {
+        const x = hm % 7, y = (hm - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+        ctx.lineWidth = 4;
+        if (pv.homeT[k] >= 0) { ctx.strokeStyle = '#ffb000'; ctx.beginPath(); ctx.arc(px + C / 2, py + C / 2, C * 0.52, 0, Math.PI * 2); ctx.stroke(); drawSun(ctx, px + C * 0.82, py + C * 0.18, C * 0.14); drawn.warm.push(k); }
+        else { ctx.strokeStyle = COL.cold; ctx.beginPath(); ctx.arc(px + C / 2, py + C / 2, C * 0.52, 0, Math.PI * 2); ctx.stroke(); drawSnowflake(ctx, px + C * 0.82, py + C * 0.18, C * 0.15); drawn.cold.push(k); }
+      });
+    }
+    run.drawn = drawn;
+    // Miss marks. After a failed strike in play (run.markers): where the fire stops (endpoint) and the first
+    // missing square (gap). While Preview is held, before ignition: where the fire stops only, never the empty
+    // square that would repair the route (mandate §4: Preview reveals consequence, it does not recommend a
+    // solution; the previous build drew the repair square here too). Never in probes (no Preview there).
+    if (pv && !pv.success) { const pm = FLE.missMarkers(sc, fuel, pv).map((m) => ({ home: m.home, endpoint: m.endpoint, gap: -1 })); drawMarkers(ctx, g, pm); drawn.markers = pm.map((m) => [m.home, m.endpoint, m.gap]); }
+    if (b && a.done && run.markers) { drawMarkers(ctx, g, run.markers); if (!pv) drawn.markers = run.markers.map((m) => [m.home, m.endpoint, m.gap]); }
+    // prediction toggles
+    if (run.phase === 'predict' || run.phase === 'probePredict' || run.phase === 'probeRepredict') {
+      sc.homes.forEach((hm, k) => {
+        const x = hm % 7, y = (hm - x) / 7, cx = g.bx + x * C + C / 2, cy = g.by + y * C + C / 2;
+        const on = run.predicted.has(k);
+        ctx.lineWidth = 3; ctx.strokeStyle = on ? COL.ok : '#2f6fde'; ctx.setLineDash(on ? [] : [5, 4]);
+        ctx.beginPath(); ctx.arc(cx, cy, C * 0.54, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+        if (on) { ctx.beginPath(); ctx.arc(cx + C * 0.36, cy - C * 0.36, C * 0.17, 0, Math.PI * 2); ctx.fillStyle = COL.ok; ctx.fill();
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx + C * 0.28, cy - C * 0.36); ctx.lineTo(cx + C * 0.35, cy - C * 0.29); ctx.lineTo(cx + C * 0.45, cy - C * 0.44); ctx.stroke(); }
+      });
+    }
+    // probe edit marker
+    if (run.kind === 'probe' && run.probe && run.probe.edit && (run.phase === 'probeEdit' || run.phase === 'probeRepredict' || run.phase === 'probeStrike2')) {
+      const i = run.probe.edit.cell, x = i % 7, y = (i - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+      ctx.strokeStyle = '#2f6fde'; ctx.lineWidth = 3; ctx.strokeRect(px + 2, py + 2, C - 4, C - 4);
+    }
+    // a stroke that was refused at a square that is not snow: a short ring on that square
+    if (run.refusal && performance.now() - run.refusal.t < REFUSAL_MS) {
+      const i = run.refusal.cell, x = i % 7, y = (i - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+      ctx.strokeStyle = COL.refuse; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(px + C / 2, py + C / 2, C * 0.38, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px + C * 0.23, py + C * 0.23); ctx.lineTo(px + C * 0.77, py + C * 0.77); ctx.stroke();
+    }
+    // tray / material area
+    drawTray(run, ctx);
+    // dragged piece and its landing spot
+    if (run.cond === 'A' && run.drag && run.drag.active) {
+      const pc = run.pieces[run.drag.id];
+      const s = dragSnap(run);
+      if (!s.toTray) {
+        for (const [x, y] of s.cells) {
+          if (x < 0 || y < 0 || x >= 7 || y >= 8) continue;
+          const px = g.bx + x * C, py = g.by + y * C;
+          ctx.fillStyle = s.legal ? 'rgba(47,158,68,.18)' : 'rgba(224,49,49,.16)'; ctx.fillRect(px + 1, py + 1, C - 2, C - 2);
+        }
+        outlinePiece(ctx, g, s.cells.filter(([x, y]) => x >= 0 && y >= 0 && x < 7 && y < 8), s.legal ? COL.ok : COL.bad);
+      }
+      const tl = dragTopLeft(run);
+      ctx.globalAlpha = 0.88;
+      for (const [dx, dy] of oriOf(pc)) { rr(ctx, tl.x + dx * C + C * 0.14, tl.y + dy * C + C * 0.14, C * 0.72, C * 0.72, C * 0.14); ctx.fillStyle = COL.fuel; ctx.fill(); ctx.strokeStyle = COL.fuelEdge; ctx.lineWidth = 1.5; ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    }
+  }
+  function drawMarkers(ctx, g, markers) {
+    const C = g.C;
+    for (const m of markers) {
+      if (m.endpoint >= 0) { const x = m.endpoint % 7, y = (m.endpoint - x) / 7; ctx.strokeStyle = COL.bad; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(g.bx + x * C + C / 2, g.by + y * C + C / 2, C * 0.44, 0, Math.PI * 2); ctx.stroke(); }
+      if (m.gap >= 0) {
+        const x = m.gap % 7, y = (m.gap - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+        ctx.setLineDash([5, 4]); ctx.strokeStyle = COL.bad; ctx.lineWidth = 2.5; rr(ctx, px + C * 0.12, py + C * 0.12, C * 0.76, C * 0.76, C * 0.14); ctx.stroke(); ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(px + C * 0.36, py + C * 0.36); ctx.lineTo(px + C * 0.64, py + C * 0.64); ctx.moveTo(px + C * 0.64, py + C * 0.36); ctx.lineTo(px + C * 0.36, py + C * 0.64); ctx.stroke();
+      }
+    }
+  }
+  function outlinePiece(ctx, g, cells, color) {
+    const set = new Set(cells.map(([x, y]) => x + ',' + y));
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    for (const [x, y] of cells) {
+      const px = g.bx + x * g.C, py = g.by + y * g.C, C = g.C, m = 3;
+      if (!set.has(x + ',' + (y - 1))) { ctx.moveTo(px + m, py + m); ctx.lineTo(px + C - m, py + m); }
+      if (!set.has(x + 1 + ',' + y)) { ctx.moveTo(px + C - m, py + m); ctx.lineTo(px + C - m, py + C - m); }
+      if (!set.has(x + ',' + (y + 1))) { ctx.moveTo(px + m, py + C - m); ctx.lineTo(px + C - m, py + C - m); }
+      if (!set.has(x - 1 + ',' + y)) { ctx.moveTo(px + m, py + m); ctx.lineTo(px + m, py + C - m); }
+    }
+    ctx.stroke();
+  }
+  function drawHome(ctx, px, py, C, warm) {
+    const x0 = px + C * 0.16, x1 = px + C * 0.84, yr = py + C * 0.14, ye = py + C * 0.46, yb = py + C * 0.86;
+    ctx.beginPath(); ctx.moveTo(x0 - C * 0.04, ye); ctx.lineTo(px + C / 2, yr); ctx.lineTo(x1 + C * 0.04, ye); ctx.lineTo(x1, ye); ctx.lineTo(x1, yb); ctx.lineTo(x0, yb); ctx.lineTo(x0, ye); ctx.closePath();
+    ctx.fillStyle = warm ? COL.homeWarm : COL.home; ctx.fill();
+    ctx.fillStyle = warm ? COL.windowWarm : COL.window; ctx.fillRect(px + C * 0.4, py + C * 0.56, C * 0.2, C * 0.18);
+    // chimney
+    ctx.fillStyle = warm ? COL.homeWarm : COL.home; ctx.fillRect(px + C * 0.64, py + C * 0.2, C * 0.09, C * 0.16);
+  }
+  function drawSnowflake(ctx, cx, cy, r) {
+    ctx.strokeStyle = COL.cold; ctx.lineWidth = 2; ctx.beginPath();
+    for (let k = 0; k < 3; k++) { const an = k * Math.PI / 3; ctx.moveTo(cx - r * Math.cos(an), cy - r * Math.sin(an)); ctx.lineTo(cx + r * Math.cos(an), cy + r * Math.sin(an)); }
+    ctx.stroke();
+  }
+  function drawSun(ctx, cx, cy, r) { ctx.fillStyle = '#ffb000'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); }
+  function drawTray(run, ctx) {
+    const g = run.g, C = g.C;
+    if (run.cond === 'A') {
+      for (const pc of run.pieces) {
+        const s = run.slots[pc.id];
+        rr(ctx, s.x - 6, g.trayY, s.w + 12, g.trayH, 10); ctx.fillStyle = pc.placed ? 'rgba(255,255,255,.35)' : '#ffffff'; ctx.fill();
+        if (pc.placed || (run.drag && run.drag.active && run.drag.id === pc.id)) continue;
+        const r = trayPieceRect(run, pc);
+        for (const [dx, dy] of oriOf(pc)) { rr(ctx, r.ox + dx * r.ts + 1.5, r.oy + dy * r.ts + 1.5, r.ts - 3, r.ts - 3, r.ts * 0.18); ctx.fillStyle = COL.fuel; ctx.fill(); ctx.strokeStyle = COL.fuelEdge; ctx.lineWidth = 1.2; ctx.stroke(); }
+        // small turn arrow
+        ctx.strokeStyle = '#8a96a0'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(s.x + s.w + 1, g.trayY + 9, 5, Math.PI * 0.2, Math.PI * 1.6); ctx.stroke();
+      }
+    } else if (run.cond === 'C') {
+      const n = run.sc.budget, left = n - used(run);
+      const sz = Math.min(C * 0.42, (g.bw - 24) / n - 4), tot = n * (sz + 4) - 4;
+      let x = g.bx + (g.bw - tot) / 2; const y = g.trayY + (g.trayH - sz) / 2;
+      const flash = performance.now() - run.noMoreFlash < 600;
+      for (let k = 0; k < n; k++) {
+        rr(ctx, x, y, sz, sz, sz * 0.2);
+        if (k < left) { ctx.fillStyle = COL.fuel; ctx.fill(); ctx.strokeStyle = COL.fuelEdge; ctx.lineWidth = 1.2; ctx.stroke(); }
+        else { ctx.strokeStyle = flash ? COL.bad : '#b9c3ca'; ctx.lineWidth = 1.5; ctx.stroke(); }
+        x += sz + 4;
+      }
+    }
+  }
+
+  Object.assign(U, { draw });
+})();
+</script>
+<script>/*
+ * Preview: holding Preview shows what the same burn() would do now; releasing it, or lifting a finger anywhere, ends it.
+ * One of the page modules (load order: ui_common, ui_record, ui_render, ui_preview, ui_input, ui_scene, ui_testhooks, ui_flow). Modules share
+ * nothing but window.FL1R1_UI: functions from another module are called through it when they run, constants
+ * come from modules loaded earlier, and the shared state (RUN, FLOW, stepIdx, FROZEN, T0) lives on it.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL1R1_UI;
+  const draw = (...a       ) => U.draw(...a);
+  const ev = (...a       ) => U.ev(...a);
+  const firstAction = (...a       ) => U.firstAction(...a);
+  const renderControls = (...a       ) => U.renderControls(...a);
+  /* ---------- preview (same burn() as the strike) */
+  function previewOn(run) {
+    if (run.phase !== 'edit' || run.preview) return;
+    run.preview = true; run.previewStart = performance.now(); run.rec.previewCount++;
+    ev('pvOn'); firstAction(run); draw(run);
+  }
+  function previewOff(run) {
+    if (!run.preview) return;
+    run.preview = false; const d = performance.now() - run.previewStart; run.rec.previewMs += Math.round(d);
+    ev('pvOff', Math.round(d)); draw(run);
+  }
+  // safety: a finger lifted anywhere ends a held Preview
+  document.addEventListener('pointerup', () => { if (U.RUN && U.RUN.preview) { previewOff(U.RUN); renderControls(U.RUN); } }, true);
+  document.addEventListener('pointercancel', () => { if (U.RUN && U.RUN.preview) { previewOff(U.RUN); renderControls(U.RUN); } }, true);
+
+  Object.assign(U, { previewOn, previewOff });
+})();
+</script>
+<script>/*
+ * Input: pointer and touch handling for every version; board changes go only through the scene's act() (the board model).
+ * One of the page modules (load order: ui_common, ui_record, ui_render, ui_preview, ui_input, ui_scene, ui_testhooks, ui_flow). Modules share
+ * nothing but window.FL1R1_UI: functions from another module are called through it when they run, constants
+ * come from modules loaded earlier, and the shared state (RUN, FLOW, stepIdx, FROZEN, T0) lives on it.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL1R1_UI;
+  const { FLE, FLM, REFUSAL_MS, TXT } = U;
+  const act = (...a       ) => U.act(...a);
+  const cellAt = (...a       ) => U.cellAt(...a);
+  const currentFuel = (...a       ) => U.currentFuel(...a);
+  const dims = (...a       ) => U.dims(...a);
+  const draw = (...a       ) => U.draw(...a);
+  const ev = (...a       ) => U.ev(...a);
+  const firstAction = (...a       ) => U.firstAction(...a);
+  const firstPlace = (...a       ) => U.firstPlace(...a);
+  const logError = (...a       ) => U.logError(...a);
+  const occupancy = (...a       ) => U.occupancy(...a);
+  const oriOf = (...a       ) => U.oriOf(...a);
+  const plog = (...a       ) => U.plog(...a);
+  const probeToggle = (...a       ) => U.probeToggle(...a);
+  const renderControls = (...a       ) => U.renderControls(...a);
+  const save = (...a       ) => U.save(...a);
+  const setHint = (...a       ) => U.setHint(...a);
+  const trayPieceRect = (...a       ) => U.trayPieceRect(...a);
+  /* ---------- input */
+  function attachInput(run) {
+    const cv = run.el.canvas;
+    const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    // one finger at a time: while a drag or a stroke is under way, other fingers are ignored
+    const other = (e) => run.activePointer != null && e.pointerId !== run.activePointer;
+    cv.addEventListener('pointerdown', (e) => {
+      if (run.dead) return;
+      e.preventDefault();
+      if (other(e)) { ev('extraFinger'); plog(run, 'x', pos(e)); return; }
+      try { cv.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+      const p = pos(e);
+      if (!run.rec.pointerType) run.rec.pointerType = e.pointerType || null;
+      plog(run, 'd', p);
+      onDown(run, p, e);
+      if (run.drag || run.stroke) run.activePointer = e.pointerId;
+    });
+    cv.addEventListener('pointermove', (e) => { if (!run.dead && !other(e)) { if (run.activePointer != null) plog(run, 'm', pos(e)); onMove(run, pos(e)); } });
+    cv.addEventListener('pointerup', (e) => { if (run.dead || other(e)) return; plog(run, 'u', pos(e)); onUp(run, pos(e)); run.activePointer = null; });
+    // a cancelled touch counts as lost input only when it ended a drag or a stroke that was under way
+    const lost = () => { if (run.drag || run.stroke) { const k = run.drag ? (run.drag.active ? 'drag' : 'tap') : 'stroke'; run.rec.inputLost = (run.rec.inputLost || 0) + 1; ev('inputLost', [k, run.def.id]); } };
+    cv.addEventListener('pointercancel', (e) => { if (run.dead || other(e)) return; plog(run, 'c', pos(e)); lost(); onCancel(run); run.activePointer = null; });
+    cv.addEventListener('lostpointercapture', (e) => { if (!run.dead && e.pointerId === run.activePointer) { lost(); onCancel(run); run.activePointer = null; } });
+    cv.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+  function homeAt(run, p) { const i = cellAt(run, p.x, p.y); return run.sc.homes.indexOf(i); }
+  function onDown(run, p, e) {
+    // home toggles for predictions
+    if (run.phase === 'predict' || run.phase === 'probePredict' || run.phase === 'probeRepredict') {
+      const k = homeAt(run, p);
+      if (k >= 0) { if (run.predicted.has(k)) run.predicted.delete(k); else run.predicted.add(k); ev('predTap', k); draw(run); renderControls(run); }
+      return;
+    }
+    if (run.phase === 'probeEdit') { const i = cellAt(run, p.x, p.y); if (i >= 0) probeToggle(run, i); return; }
+    if (run.phase !== 'edit') return;
+    if (run.cond === 'A') downA(run, p, e);
+    else if (run.cond === 'C') downC(run, p);
+    else if (run.cond === 'B' && cellAt(run, p.x, p.y) >= 0) { ev('bTap'); flashHint(run, TXT.bTap); }
+  }
+  function onMove(run, p) {
+    if (run.cond === 'A' && run.drag) moveA(run, p);
+    else if (run.cond === 'C' && run.stroke) moveC(run, p);
+  }
+  function onUp(run, p) {
+    if (run.cond === 'A' && run.drag) upA(run, p);
+    else if (run.cond === 'C' && run.stroke) upC(run);
+  }
+  function onCancel(run) {
+    if (run.cond === 'A' && run.drag) { run.drag = null; draw(run); }
+    if (run.cond === 'C' && run.stroke) { endStroke(run); }
+  }
+
+  /* ---------- A: pieces */
+  function doUndo(run) {
+    if (!run.undo.length || run.phase !== 'edit') return;
+    // Undo reverses the last board change; a piece that stays in the tray keeps the way it was turned (model)
+    if (!act(run, ['undo']).ok) return;
+    run.rec.edits.undo++; ev('undo'); renderControls(run); draw(run); save();
+  }
+  function downA(run, p, e) {
+    const g = run.g;
+    let hit = null;
+    const i = cellAt(run, p.x, p.y);
+    if (i >= 0) {
+      const occ = occupancy(run, -1);
+      if (occ[i] >= 0) {
+        const pc = run.pieces[occ[i]];
+        hit = { id: pc.id, from: 'board', gx: (p.x - (g.bx + pc.x * g.C)), gy: (p.y - (g.by + pc.y * g.C)) };
+      }
+    } else if (p.y >= g.trayY - g.C * 0.1) {
+      for (const pc of run.pieces) {
+        if (pc.placed) continue;
+        const r = trayPieceRect(run, pc);
+        const s = run.slots[pc.id];
+        if (p.x >= s.x - 6 && p.x <= s.x + s.w + 6 && p.y >= g.trayY - 4 && p.y <= g.trayY + g.trayH + 4) {
+          // grab offset expressed in board scale so the grabbed cell stays under the finger
+          const fx = Math.min(r.w - 0.01, Math.max(0, (p.x - r.ox) / r.ts)), fy = Math.min(r.hh - 0.01, Math.max(0, (p.y - r.oy) / r.ts));
+          hit = { id: pc.id, from: 'tray', gx: fx * g.C, gy: fy * g.C };
+          break;
+        }
+      }
+    }
+    if (!hit) return;
+    run.drag = { ...hit, sx: p.x, sy: p.y, x: p.x, y: p.y, active: false, touch: e.pointerType !== 'mouse' };
+  }
+  function dragTopLeft(run) {
+    const d = run.drag, g = run.g;
+    // a piece taken from the tray is lifted above the finger so it stays visible; a piece already on
+    // the board keeps its grab point, so a sideways move stays in its row
+    const lift = d.touch && d.from === 'tray' ? g.C * 0.9 : 0;
+    return { x: d.x - d.gx, y: d.y - d.gy - lift };
+  }
+  function dragSnap(run) {
+    const g = run.g, tl = dragTopLeft(run), pc = run.pieces[run.drag.id];
+    const ax = Math.round((tl.x - g.bx) / g.C), ay = Math.round((tl.y - g.by) / g.C);
+    const cells = FLE.placementCells(pc.type, pc.o, ax, ay);
+    const legal = FLE.canPlace(run.sc, occupancy(run, pc.id), cells, pc.id);
+    const [, hh] = dims(oriOf(pc));
+    const cy = tl.y + (hh * g.C) / 2;
+    const toTray = cy > g.by + g.bh + g.C * 0.25;
+    return { ax, ay, cells, legal, toTray };
+  }
+  function moveA(run, p) {
+    const d = run.drag;
+    d.x = p.x; d.y = p.y;
+    if (!d.active && Math.hypot(p.x - d.sx, p.y - d.sy) > 8) { d.active = true; firstAction(run); ev('dragStart', [d.id, d.from]); }
+    if (d.active) draw(run);
+  }
+  function upA(run, p) {
+    const d = run.drag; d.x = p.x; d.y = p.y;
+    const pc = run.pieces[d.id];
+    if (!d.active) { // tap = turn the piece
+      run.drag = null; rotatePiece(run, pc); return;
+    }
+    const s = dragSnap(run);
+    if (s.toTray) {
+      if (pc.placed && act(run, ['unplace', pc.id]).ok) { run.rec.edits.unplace++; ev('unplace', pc.id); }
+    } else if (s.legal) {
+      const wasPlaced = pc.placed;
+      if (act(run, [wasPlaced ? 'move' : 'place', pc.id, s.ax, s.ay]).ok) {
+        if (wasPlaced) { run.rec.edits.move++; ev('move', [pc.id, s.ax, s.ay]); } else { run.rec.edits.place++; firstPlace(run); ev('place', [pc.id, pc.type, pc.o, s.ax, s.ay]); }
+      } else { run.rec.edits.fail++; ev('dropFail', pc.id); flashShake(run); flashHint(run, TXT.dropFail); }
+    } else { run.rec.edits.fail++; ev('dropFail', pc.id); flashShake(run); flashHint(run, TXT.dropFail); }
+    run.drag = null; renderControls(run); draw(run); save();
+  }
+  function rotatePiece(run, pc) {
+    firstAction(run);
+    const n = FLE.ORIENTS[pc.type].length;
+    if (n === 1) return;
+    // a tray turn is not a board change: not on the undo stack
+    if (!pc.placed) { if (act(run, ['tturn', pc.id]).ok) { run.rec.edits.turnTray++; ev('rotate', [pc.id, 'tray', pc.o]); draw(run); save(); } return; }
+    // on the board the piece turns about its centre, nudged one square if it does not fit (same rule as the model)
+    if (act(run, ['bturn', pc.id]).ok) {
+      run.rec.edits.turnBoard++; ev('rotate', [pc.id, 'board', pc.o, pc.x, pc.y]); renderControls(run); draw(run); save(); return;
+    }
+    run.rec.edits.fail++; ev('rotateFail', pc.id); flashShake(run); flashHint(run, TXT.turnFail);
+  }
+  /** A short reason on the hint line for input that was refused; the usual hint comes back after a moment. */
+  function flashHint(run, html) {
+    setHint(run, html);
+    clearTimeout(run.hintTimer);
+    run.hintTimer = setTimeout(() => { if (!run.dead && run.phase === 'edit') setHint(run); }, 1800);
+  }
+  function flashShake(run) {
+    const cv = run.el.canvas; cv.classList.remove('shake'); void cv.offsetWidth; cv.classList.add('shake');
+  }
+
+  /* ---------- C: draw */
+  /** Material in use: fuel on the board plus what the stroke under way has painted so far. */
+  function used(run) { return FLE.fuelCount(currentFuel(run)); }
+  function strokeView(run) {
+    const s = run.stroke; if (!s || !s.painted.length) return run.fuel;
+    const f = new Uint8Array(run.fuel); for (const c of s.painted) f[c] = 1; return f;
+  }
+  /** Recompute what the stroke paints (the model's rule) and give the no-more-fuel feedback once. */
+  function updateStroke(run) {
+    const s = run.stroke;
+    if (!s.path.length) return;
+    const r = FLM.strokePaint(run.board, s.path);
+    if (!r.ok) { logError('strokePath'); return; }
+    const added = r.painted.length - s.painted.length;
+    if (added > 0) { run.rec.edits.paint += added; firstPlace(run); }
+    s.painted = r.painted;
+    if (r.noMore && !s.noMore) { s.noMore = true; run.noMoreFlash = performance.now(); ev('noMore'); setHint(run, TXT.noMore); flashShake(run); }
+  }
+  function downC(run, p) {
+    const i = cellAt(run, p.x, p.y);
+    if (i < 0) return;
+    firstAction(run);
+    // a stroke that starts on the fire, a home or a rock begins at the first snow square it reaches
+    const snow = run.sc.cells[i] === FLE.SNOW;
+    run.stroke = { path: snow ? [i] : [], anchor: i, painted: [], startedOnFuel: !!run.fuel[i], start: i, moved: false, noMore: false };
+    updateStroke(run);
+    draw(run);
+  }
+  /**
+   * The squares a finger passes from one square to the next, side by side (4-connected). At a
+   * diagonal step it turns through the corner square that is snow when only one of the two is.
+   */
+  function walkCells(run, x0, y0, x1, y1) {
+    const out = []; let x = x0, y = y0;
+    const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0), sx = x1 > x0 ? 1 : -1, sy = y1 > y0 ? 1 : -1;
+    const open = (cx, cy) => run.sc.cells[cy * 7 + cx] === FLE.SNOW;
+    let ix = 0, iy = 0;
+    while (ix < dx || iy < dy) {
+      let stepX = dy === 0 || (dx !== 0 && (0.5 + ix) / dx < (0.5 + iy) / dy);
+      if (ix < dx && iy < dy) {
+        const blocked = stepX ? !open(x + sx, y) : !open(x, y + sy);
+        const altOpen = stepX ? open(x, y + sy) : open(x + sx, y);
+        if (blocked && altOpen) stepX = !stepX;
+      }
+      if (stepX) { x += sx; ix++; } else { y += sy; iy++; }
+      out.push([x, y]);
+    }
+    return out;
+  }
+  /** A stroke never crosses a square that is not snow: it stops there and marks it, and the finger goes round. */
+  function refuseAt(run, c) {
+    if (!run.refusal || run.refusal.cell !== c || performance.now() - run.refusal.t > 400) ev('strokeRefused', c);
+    run.refusal = { cell: c, t: performance.now() };
+    run.rec.edits.refused = (run.rec.edits.refused || 0) + 1;
+    flashHint(run, TXT.refused);
+    setTimeout(() => { if (!run.dead) draw(run); }, REFUSAL_MS + 20);
+  }
+  function moveC(run, p) {
+    const s = run.stroke;
+    const g = run.g;
+    const cx = Math.max(0, Math.min(6, Math.floor((p.x - g.bx) / g.C))), cy = Math.max(0, Math.min(7, Math.floor((p.y - g.by) / g.C)));
+    const inside = p.x >= g.bx && p.y >= g.by && p.x < g.bx + g.bw && p.y < g.by + g.bh;
+    if (!inside) return;
+    const i = cy * 7 + cx;
+    // over a rock, a home or the fire the stroke waits for the next snow square
+    if (i === s.anchor || run.sc.cells[i] !== FLE.SNOW) return;
+    const ax = s.anchor % 7, ay = (s.anchor - ax) / 7;
+    let grew = false;
+    for (const [x, y] of walkCells(run, ax, ay, cx, cy)) {
+      const c = y * 7 + x;
+      if (run.sc.cells[c] !== FLE.SNOW) {
+        if (!s.path.length) continue; // still leaving the square where the finger came down
+        refuseAt(run, c); break;
+      }
+      s.path.push(c); s.anchor = c; grew = true;
+    }
+    if (grew) { s.moved = true; updateStroke(run); }
+    draw(run);
+  }
+  function upC(run) {
+    const s = run.stroke;
+    if (!s.moved && s.startedOnFuel) { // tap on fuel = remove it
+      run.stroke = null;
+      if (act(run, ['erase', s.start]).ok) { run.rec.edits.erase++; ev('erase', s.start); }
+      setHint(run); renderControls(run); draw(run); save(); return;
+    }
+    endStroke(run);
+  }
+  function endStroke(run) {
+    const s = run.stroke; run.stroke = null;
+    if (s && s.painted.length) {
+      const r = act(run, ['stroke', s.path]);
+      if (r.ok) { run.rec.edits.strokes++; ev('stroke', r.painted); } else logError('stroke');
+    }
+    if (s && s.noMore) setTimeout(() => { if (!run.dead && run.phase === 'edit') setHint(run); }, 1800);
+    renderControls(run); draw(run); save();
+  }
+
+  Object.assign(U, { attachInput, doUndo, dragTopLeft, dragSnap, flashShake, used, strokeView, endStroke });
+})();
+</script>
+<script>/*
+ * Scene runner (condition adapter on the page): one scene or probe from start to end, through the board model.
+ * One of the page modules (load order: ui_common, ui_record, ui_render, ui_preview, ui_input, ui_scene, ui_testhooks, ui_flow). Modules share
+ * nothing but window.FL1R1_UI: functions from another module are called through it when they run, constants
+ * come from modules loaded earlier, and the shared state (RUN, FLOW, stepIdx, FROZEN, T0) lives on it.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL1R1_UI;
+  const { BLOCK_ALLOWANCE_MS, COND, DATA, FLE, FLM, IDLE_MS, REC, SAVE_EVERY_TICKS, SKIP_AFTER_MS, SKIP_AFTER_TRIES, STEP_MS, TAIL_MS, TEACH_SKIP_MS, TEACH_SKIP_TRIES, TXT, app } = U;
+  const attachInput = (...a       ) => U.attachInput(...a);
+  const clear = (...a       ) => U.clear(...a);
+  const doUndo = (...a       ) => U.doUndo(...a);
+  const draw = (...a       ) => U.draw(...a);
+  const endStroke = (...a       ) => U.endStroke(...a);
+  const ev = (...a       ) => U.ev(...a);
+  const flashShake = (...a       ) => U.flashShake(...a);
+  const go = (...a       ) => U.go(...a);
+  const h = (...a       ) => U.h(...a);
+  const logError = (...a       ) => U.logError(...a);
+  const now = (...a       ) => U.now(...a);
+  const previewOff = (...a       ) => U.previewOff(...a);
+  const previewOn = (...a       ) => U.previewOn(...a);
+  const save = (...a       ) => U.save(...a);
+  const strokeView = (...a       ) => U.strokeView(...a);
+  const textQ = (...a       ) => U.textQ(...a);
+  const validText = (...a       ) => U.validText(...a);
+  /* ------------------------------------------------------------------ scenes */
+  function teardownScene() {
+    if (U.RUN) { U.RUN.dead = true; U.RUN.detach && U.RUN.detach(); U.RUN = null; }
+  }
+
+  function newEdits() { return { place: 0, move: 0, unplace: 0, turnTray: 0, turnBoard: 0, paint: 0, strokes: 0, erase: 0, undo: 0, fail: 0 }; }
+  function startScene(st, onDone) {
+    const cond = st.cond === '@top' ? REC.ranking.order[0] : st.cond;
+    const def = DATA.scenes[st.scene];
+    const sc = FLE.parseScene(def);
+    const kind = def.kind;
+    // the scene that was in progress before a reload (same step, same board) is restored, not restarted
+    const prev = REC.cur && REC.cur.step === U.stepIdx && REC.cur.sid === def.id && !!REC.cur.g3 === !!st.g3 && REC.cur.cond === cond ? REC.cur : null;
+    const run = {
+      st, cond, def, sc, kind, onDone, dead: false, ended: false,
+      phase: kind === 'probe' ? 'probePredict' : 'edit',
+      // the board itself lives in the model (src/model.ts); every change goes through act()
+      board: null,
+      get fuel() { return this.board.fuel; }, get pieces() { return this.board.pieces; },
+      get undo() { return this.board.undo; }, get replay() { return this.board.replay; },
+      drag: null, stroke: null, preview: false, previewStart: 0, anim: null, burn: null, markers: null, drawn: null,
+      predicted: new Set(), hasPredicted: false, attempts: null, visibleMs: 0, lastTick: performance.now(), ticks: 0,
+      solvedOnce: false,
+      blockStartVisible: blockVisibleSoFar(st.block),
+      rec: prev || { step: U.stepIdx, sid: def.id, cond, kind, block: st.block, idx: st.idx, top: !!st.top, g3: !!st.g3, startT: now(), endT: null, visibleMs: 0,
+        attempts: [], outcome: null, edits: newEdits(), previewCount: 0, previewMs: 0, firstActionMs: null, firstPlaceMs: null, editsAtFirstStrike: null,
+        replays: 0, probe: null, resumed: [], sceneHash: DATA.hashes[def.id], log: [], stateHash: null, logHash: null, ptr: [], idleMs: 0, pointerType: null },
+      probe: kind === 'probe' ? (prev && prev.probe ? prev.probe : { pred1: null, p1: null, why: '', edit: null, editDone: false, pred2: null, p2: null }) : null,
+      noMoreFlash: -1e9, timeUp: false, lastInput: performance.now(), lastPtrCell: -2,
+    };
+    run.rec.probe = run.probe;
+    run.attempts = run.rec.attempts;
+    const mcond = kind === 'probe' ? 'P' : cond;
+    if (prev) {
+      // the input log is the record of the board: replaying it puts the board back exactly as it was
+      const rr = FLM.replayLog(sc, mcond, def.id, DATA.hashes[def.id], def.laid || [], (prev.log || []).map((e) => e.slice(1)));
+      run.board = rr.board;
+      if (rr.error) logError('resumeReplay');
+      restoreRun(run, prev);
+    } else run.board = FLM.newBoard(sc, mcond, def.id, DATA.hashes[def.id], def.laid || []);
+    run.rec.stateHash = FLM.stateHash(run.board);
+    U.RUN = run; REC.cur = run.rec;
+    if (st.g3 && REC.g3.sceneStart == null) REC.g3.sceneStart = now();
+    buildSceneDom(run);
+    ev(prev ? 'sceneResume' : 'scene', [def.id, cond, kind]);
+    if (prev) afterRestore(run);
+    save();
+    return run;
+  }
+  function blockVisibleSoFar(block) {
+    let s = 0; for (const r of REC.scenes) if (r.block === block) s += r.visibleMs; return s;
+  }
+  /** The state needed to put a scene back exactly as it was after a reload. */
+  function liveState(run) {
+    return {
+      phase: run.phase, timeUpFrom: run.timeUpFrom || null, replay: run.replay, hasPredicted: run.hasPredicted, predicted: [...run.predicted],
+      pieces: run.cond === 'A' ? run.pieces.map((p) => [p.id, p.type, p.o, p.x, p.y, p.placed ? 1 : 0]) : undefined,
+      fuel: run.cond !== 'A' ? FLE.fuelList(run.fuel) : undefined,
+    };
+  }
+  function restoreRun(run, prev) {
+    const L = prev.live || {};
+    run.visibleMs = prev.visibleMs || 0;
+    run.rec.resumed = (prev.resumed || []).concat([[now(), L.phase || '']]);
+    run.restoredPhase = L.phase || '';
+    run.timeUpFrom = L.timeUpFrom || null;
+    run.hasPredicted = !!L.hasPredicted || prev.attempts.some((a) => a.predicted != null);
+    run.solvedOnce = prev.attempts.some((a) => a.success);
+  }
+  function afterRestore(run) {
+    const settle = () => { setHint(run); renderControls(run); draw(run); };
+    if (run.kind === 'probe') {
+      const pr = run.probe;
+      if (!pr.p1) { run.phase = 'probePredict'; run.predicted = new Set(); } // the first outcome was not seen yet
+      else if (!pr.why) { showStatic(run, run.fuel); showProbeWhy(run); } // never re-ask the first prediction
+      else if (!pr.editDone) { run.phase = 'probeEdit'; }
+      else if (!pr.p2) { run.phase = 'probeRepredict'; run.predicted = new Set(); }
+      else { showStatic(run, run.fuel); run.phase = 'result'; banner(run, run.burn.success ? TXT.success : TXT.miss, [['Next', 'primary', () => endScene(run, 'probe')]]); }
+      settle(); return;
+    }
+    const last = run.attempts[run.attempts.length - 1];
+    const lastIsCurrent = last && (last.replay || 0) === run.replay;
+    // the time-up screen comes back as it was: over the result if time ran out on a result, otherwise over the board as built
+    if (run.restoredPhase === 'timeUp') {
+      if (run.timeUpFrom === 'result' && lastIsCurrent) showStatic(run, currentFuel(run));
+      run.timeUp = true; settle(); showTimeUp(run); return;
+    }
+    // a result that was on screen (or still burning) comes back, success or miss, with its markers
+    const onScreen = ['burning', 'result'].includes(run.restoredPhase);
+    if (lastIsCurrent && (last.success || onScreen)) { showStatic(run, currentFuel(run)); run.phase = 'result'; resultBanner(run); settle(); return; }
+    run.phase = 'edit'; settle();
+  }
+  /** Show the finished burn of a structure without animating it (restored scenes only). */
+  function showStatic(run, fuel) {
+    const b = FLE.burn(run.sc, fuel);
+    run.burn = b; run.markers = b.success || run.kind === 'probe' ? [] : FLE.missMarkers(run.sc, fuel, b);
+    run.anim = { start: performance.now(), b, done: true };
+    draw(run);
+  }
+
+  /* ---------- DOM for a scene */
+  function buildSceneDom(run) {
+    clear();
+    const cond = run.cond;
+    const isProbe = run.kind === 'probe';
+    const bar = h('div', { class: 'bar' });
+    if (isProbe) bar.append(h('div', { class: 'badge' }, 'Quick puzzle ' + (run.st.idx + 1) + ' of 2'));
+    else bar.append(h('div', { class: 'badge' }, h('span', { class: 'sym' }, COND[cond].sym), h('span', null, COND[cond].name)));
+    const dots = h('div', { class: 'dots' });
+    if (!isProbe && run.st.block < 3) for (let k = 0; k < 3; k++) dots.append(h('i', { class: k < run.st.idx ? 'done' : k === run.st.idx ? 'on' : '' }));
+    if (run.st.g3) dots.append(h('button', { style: 'min-height:36px;padding:4px 12px', onclick: () => endScene(run, 'quit') }, 'Finish now'));
+    bar.append(dots);
+    const hint = h('div', { class: 'hint', id: 'hint' });
+    const stage = h('div', { id: 'stage' });
+    const canvas = (h('canvas', { id: 'board', 'aria-label': 'Game board' })                     );
+    stage.append(canvas);
+    const controls = h('div', { class: 'controls', id: 'controls' });
+    app.append(bar, hint, stage, controls);
+    run.el = { hint, canvas, controls, stage, ctx: (canvas.getContext('2d')                            ) };
+    layout(run);
+    attachInput(run);
+    renderControls(run);
+    setHint(run);
+    draw(run);
+    const onResize = () => { if (!run.dead) { layout(run); draw(run); } };
+    addEventListener('resize', onResize);
+    const ticker = setInterval(() => tick(run), 250);
+    run.detach = () => { removeEventListener('resize', onResize); clearInterval(ticker); };
+  }
+  function tick(run) {
+    if (run.dead) return;
+    const t = performance.now();
+    if (document.visibilityState === 'visible') {
+      run.visibleMs += t - run.lastTick;
+      // idle: visible time with no touch for longer than IDLE_MS (counted from the end of that pause's first IDLE_MS)
+      if (t - run.lastInput > IDLE_MS) run.rec.idleMs = Math.round((run.rec.idleMs || 0) + (t - run.lastTick));
+    }
+    run.lastTick = t;
+    run.rec.visibleMs = Math.round(run.visibleMs);
+    if (run.st.g3) updateG3(run);
+    if (run.kind !== 'probe' && !run.st.top && !run.st.g3 && !run.timeUp && run.st.block < 3 &&
+      run.blockStartVisible + run.visibleMs > BLOCK_ALLOWANCE_MS && (run.phase === 'edit' || run.phase === 'result' || run.phase === 'predict')) {
+      run.timeUp = true; ev('timeUp', run.def.id); showTimeUp(run);
+    }
+    if (run.phase === 'edit' || run.phase === 'result') renderControls(run);
+    if (++run.ticks % SAVE_EVERY_TICKS === 0) save();
+  }
+
+  /* ---------- geometry */
+  function layout(run) {
+    const vw = Math.min(innerWidth, 480), vh = innerHeight;
+    const availW = vw - 16, availH = vh - 200;
+    const C = Math.max(28, Math.min(66, Math.floor(Math.min(availW / 7.3, availH / 10.45))));
+    const pad = Math.round(C * 0.15);
+    const trayGap = Math.round(C * 0.25), trayH = Math.round(C * 1.9);
+    const cw = 7 * C + 2 * pad, chh = 8 * C + 2 * pad + trayGap + trayH;
+    const dpr = devicePixelRatio || 1;
+    const cv = run.el.canvas;
+    cv.width = Math.round(cw * dpr); cv.height = Math.round(chh * dpr);
+    cv.style.width = cw + 'px'; cv.style.height = chh + 'px';
+    run.el.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    run.g = { C, pad, bx: pad, by: pad, bw: 7 * C, bh: 8 * C, trayY: pad + 8 * C + trayGap, trayH, cw, ch: chh };
+    if (run.cond === 'A') layoutTray(run);
+  }
+  function oriOf(p) { return FLE.ORIENTS[p.type][p.o % FLE.ORIENTS[p.type].length]; }
+  function dims(ori) { let w = 0, hh = 0; for (const [x, y] of ori) { if (x + 1 > w) w = x + 1; if (y + 1 > hh) hh = y + 1; } return [w, hh]; }
+  function layoutTray(run) {
+    const g = run.g, ts = g.C * 0.5;
+    // fixed slot per piece; slot width fits the widest orientation of that piece
+    const widths = run.pieces.map((p) => Math.max(...FLE.ORIENTS[p.type].map((o) => dims(o)[0])) * ts);
+    const gap = g.C * 0.35;
+    const total = widths.reduce((a, b) => a + b, 0) + gap * (widths.length - 1);
+    let x = g.bx + (g.bw - total) / 2;
+    run.slots = run.pieces.map((p, k) => { const s = { x, y: g.trayY + (g.trayH - 3 * ts) / 2, w: widths[k], h: 3 * ts, ts }; x += widths[k] + gap; return s; });
+  }
+  function trayPieceRect(run, p) {
+    const s = run.slots[p.id], ori = oriOf(p), [w, hh] = dims(ori);
+    const ox = s.x + (s.w - w * s.ts) / 2, oy = s.y + (s.h - hh * s.ts) / 2;
+    return { ox, oy, w, hh, ts: s.ts };
+  }
+  function cellAt(run, px, py) {
+    const g = run.g; const x = Math.floor((px - g.bx) / g.C), y = Math.floor((py - g.by) / g.C);
+    if (x < 0 || y < 0 || x >= 7 || y >= 8) return -1;
+    return y * 7 + x;
+  }
+  function occupancy(run, ignoreId) {
+    const occ = new Int16Array(56).fill(-1);
+    for (const p of run.pieces) if (p.placed && p.id !== ignoreId) for (const [x, y] of FLE.placementCells(p.type, p.o, p.x, p.y)) occ[y * 7 + x] = p.id;
+    return occ;
+  }
+  /** Current fuel set for the scene (the only input to burn()). */
+  function currentFuel(run) {
+    if (run.cond === 'A') {
+      const f = FLE.emptyFuel(run.sc);
+      for (const p of run.pieces) if (p.placed && !(run.drag && run.drag.id === p.id && run.drag.active)) for (const [x, y] of FLE.placementCells(p.type, p.o, p.x, p.y)) f[y * 7 + x] = 1;
+      return f;
+    }
+    return run.cond === 'C' && run.stroke ? strokeView(run) : run.fuel;
+  }
+
+  /* ---------- controls and hint */
+  function setHint(run, html         ) {
+    const el = run.el.hint;
+    if (html !== undefined) { el.innerHTML = html; return; }
+    if (run.kind === 'probe') {
+      el.innerHTML = run.phase === 'probePredict' ? TXT.probePredict : run.phase === 'probeEdit' ? TXT.probeEdit : run.phase === 'probeRepredict' ? TXT.probeRepredict : '';
+      return;
+    }
+    if (run.phase === 'predict') { el.innerHTML = TXT.predict; return; }
+    if (run.phase !== 'edit') { el.innerHTML = ''; return; }
+    // the Preview line is the same in every version's teaching scene
+    el.innerHTML = run.kind === 'teach' ? TXT.teachHint[run.cond] + '<br>' + TXT.previewLine : TXT.mainHint[run.cond];
+  }
+  function renderControls(run) {
+    const c = run.el.controls;
+    if (run.preview) return; // never rebuild the buttons under a finger that is holding Preview
+    const key = run.phase + '|' + run.undo.length + '|' + (run.probe ? JSON.stringify([!!run.probe.edit, run.predicted.size]) : '') + '|' + canSkip(run) + '|' + run.solvedOnce;
+    if (c.dataset.key === key) return;
+    c.dataset.key = key;
+    c.innerHTML = '';
+    if (run.kind === 'probe') {
+      if (run.phase === 'probePredict' || run.phase === 'probeRepredict') c.append(h('button', { class: 'primary grow', onclick: () => probeDonePredict(run) }, 'Done'));
+      else if (run.phase === 'probeStrike1' || run.phase === 'probeStrike2') c.append(h('button', { class: 'strike grow', onclick: () => strike(run) }, 'Strike'));
+      else if (run.phase === 'probeEdit') {
+        c.append(h('button', { class: 'grow', disabled: !run.probe.edit, onclick: () => { if (run.probe.edit) { probeToggle(run, run.probe.edit.cell); } } }, 'Undo change'));
+        c.append(h('button', { class: 'primary grow', disabled: !run.probe.edit, onclick: () => { run.probe.editDone = true; run.phase = 'probeRepredict'; run.predicted = new Set(); ev('probeEditDone'); setHint(run); renderControls(run); draw(run); save(); } }, 'Done'));
+      }
+      return;
+    }
+    if (run.phase === 'edit') {
+      if (run.cond !== 'B') c.append(h('button', { disabled: run.undo.length === 0, onclick: () => doUndo(run), 'aria-label': 'Undo' }, 'Undo'));
+      const pv = h('button', { class: 'hold' + (run.preview ? ' active' : ''), 'aria-label': 'Hold to preview' }, 'Preview');
+      const startPv = (e) => { e.preventDefault(); previewOn(run); pv.classList.add('active'); };
+      const endPv = () => { previewOff(run); pv.classList.remove('active'); };
+      pv.addEventListener('pointerdown', startPv); pv.addEventListener('pointerup', endPv); pv.addEventListener('pointercancel', endPv); pv.addEventListener('pointerleave', endPv);
+      pv.addEventListener('contextmenu', (e) => e.preventDefault());
+      c.append(pv);
+      c.append(h('button', { class: 'strike', onclick: () => strikeRequest(run) }, 'Strike'));
+      if (run.solvedOnce) c.append(h('button', { onclick: () => endScene(run, 'solved') }, 'Next'));
+      else if (canSkip(run)) c.append(h('button', { onclick: () => endScene(run, 'skipped') }, 'Skip'));
+    } else if (run.phase === 'predict') {
+      c.append(h('button', { onclick: () => { run.phase = 'edit'; ev('predictCancel'); setHint(run); renderControls(run); draw(run); } }, 'Back'));
+      c.append(h('button', { class: 'strike grow', onclick: () => strike(run) }, 'Strike'));
+    }
+    // 'timeUp', 'burning' and 'result': no controls (the banner holds the only buttons)
+  }
+  function canSkip(run) {
+    if (run.kind === 'probe' || run.cond === 'B') return false;
+    const fails = run.attempts.filter((a) => !a.success).length;
+    if (run.kind === 'teach') return run.visibleMs >= TEACH_SKIP_MS || fails >= TEACH_SKIP_TRIES;
+    return run.visibleMs >= SKIP_AFTER_MS || fails >= SKIP_AFTER_TRIES;
+  }
+
+  function firstAction(run) { if (run.rec.firstActionMs == null) run.rec.firstActionMs = Math.round(run.visibleMs); }
+  function firstPlace(run) { if (run.rec.firstPlaceMs == null) run.rec.firstPlaceMs = Math.round(run.visibleMs); }
+
+  /* ---------- board actions */
+  /** Every board change goes through the model and into the scene's input log, with its time. */
+  function act(run, a       ) {
+    const r = FLM.apply(run.board, a);
+    if (!r.ok) { ev('refused', [a[0], r.reason]); return r; }
+    run.rec.log.push([Math.round(now()), ...a]);
+    run.rec.stateHash = FLM.stateHash(run.board);
+    run.rec.logHash = FLM.logHash(run.rec.log.map((e) => e.slice(1)));
+    return r;
+  }
+
+  /* ---------- strike */
+  function strikeRequest(run) {
+    if (run.phase !== 'edit' || run.drag || run.stroke) return; // never mid-drag or mid-stroke
+    firstAction(run);
+    // "What do you think will happen?" before the first strike of every non-teaching scene
+    if (run.kind !== 'teach' && !run.hasPredicted) {
+      run.phase = 'predict'; run.predicted = new Set(); ev('predictOpen'); setHint(run); renderControls(run); draw(run); return;
+    }
+    strike(run);
+  }
+  function strike(run) {
+    if (run.anim) return;
+    previewOff(run);
+    const predicted = run.phase === 'predict' || run.kind === 'probe' ? [...run.predicted].sort((x, y) => x - y) : null;
+    const r = act(run, ['strike', predicted]);
+    if (!r.ok) { logError('strike'); return; }
+    const st = r.strike;
+    const fuel = FLM.fuelOf(run.board);
+    const b = FLE.burn(run.sc, fuel);
+    // the structure, the reachable graph (the squares that burnt), the prediction and the homes lit
+    const att      = { t: now(), structure: st.fuel, burnt: FLE.fuelList(fuel).filter((i) => b.t[i] >= 0), predicted: st.predicted, warm: st.warm, cold: st.cold, success: st.success, steps: st.steps, replay: st.replay,
+      previewedBefore: run.rec.previewCount > (run.pvAtLastStrike || 0), previewsTotal: run.rec.previewCount,
+      tiling: run.cond === 'A' ? run.pieces.filter((p) => p.placed).map((p) => [p.type, p.o, p.x, p.y]) : undefined };
+    if (run.phase === 'predict') run.hasPredicted = true;
+    if (run.kind === 'probe') {
+      if (run.phase === 'probeStrike1') run.probe.p1 = { predicted: att.predicted, warm: b.warm, correct: att.predicted.join(',') === b.warm.join(',') };
+      else run.probe.p2 = { predicted: att.predicted, warm: b.warm, edit: run.probe.edit, changed: b.warm.join(',') !== run.probe.p1.warm.join(','), correct: att.predicted.join(',') === b.warm.join(',') };
+    }
+    if (!run.rec.editsAtFirstStrike) run.rec.editsAtFirstStrike = { ...run.rec.edits, previewCount: run.rec.previewCount, visibleMs: Math.round(run.visibleMs) };
+    run.attempts.push(att);
+    // probes show the outcome only (which squares burnt, which homes warmed): no miss markers, so
+    // nothing on screen points at the square that would change the result
+    run.burn = b; run.markers = b.success || run.kind === 'probe' ? [] : FLE.missMarkers(run.sc, fuel, b);
+    run.phase = 'burning';
+    run.anim = { start: performance.now(), b };
+    run.pvAtLastStrike = run.rec.previewCount;
+    ev('strike', [b.success ? 1 : 0, b.warm.length, b.cold.length]);
+    if (run.st.g3) updateG3(run);
+    save();
+    setHint(run, '');
+    renderControls(run);
+    animate(run);
+  }
+  function animate(run) {
+    if (run.dead) return;
+    const a = run.anim; if (!a) return;
+    const tn = performance.now();
+    const el = tn - a.start;
+    // frame pacing: the interval between frames while the burn is shown (only while the page is visible)
+    if (a.lastFrame != null && document.visibilityState === 'visible') (a.gaps = a.gaps || []).push(tn - a.lastFrame);
+    a.lastFrame = tn;
+    draw(run);
+    if (el < (a.b.steps + 1) * STEP_MS + TAIL_MS) { requestAnimationFrame(() => animate(run)); return; }
+    a.done = true;
+    const gaps = (a.gaps || []).slice().sort((x, y) => x - y);
+    const att = run.attempts[run.attempts.length - 1];
+    if (att && gaps.length) att.frames = { n: gaps.length + 1, meanMs: +(gaps.reduce((s, x) => s + x, 0) / gaps.length).toFixed(1), p95Ms: +gaps[Math.min(gaps.length - 1, Math.floor(gaps.length * 0.95))].toFixed(1), maxMs: +gaps[gaps.length - 1].toFixed(1), longOver50: gaps.filter((x) => x > 50).length };
+    afterBurn(run);
+  }
+  function replayable(run) { return run.kind === 'main' && run.st.idx === 2 && run.st.block < 3 && !run.st.top && !run.st.g3; }
+  /** Free play only (owner landing): the state hash and the burn's frame pacing, for the phone check. */
+  function freeCheckLine(run) {
+    if (REC.slot !== 'free' || run.kind === 'probe') return null;
+    const att = run.attempts[run.attempts.length - 1]; const f = att && att.frames;
+    return h('div', { class: 'small', id: 'checkLine' }, 'Check: state ' + String(run.rec.stateHash).slice(0, 12) + ' after ' + run.rec.log.length + ' actions' + (f ? '; burn frames mean ' + f.meanMs + ' ms, 95% ' + f.p95Ms + ' ms, longest ' + f.maxMs + ' ms (' + f.n + ' frames)' : ''));
+  }
+  function resultBanner(run) {
+    const b = run.burn;
+    if (b.success) {
+      run.solvedOnce = true;
+      const btns = [['Next', 'primary', () => endScene(run, 'solved')]];
+      if (replayable(run)) btns.unshift([TXT.replay, '', () => replayScene(run)]);
+      banner(run, TXT.success, btns, freeCheckLine(run));
+    } else {
+      const btns = [['Try again', 'primary', () => tryAgain(run)]];
+      if (run.solvedOnce) btns.unshift(['Next', '', () => endScene(run, 'solved')]);
+      else if (canSkip(run)) btns.unshift(['Skip', '', () => endScene(run, 'skipped')]);
+      banner(run, TXT.miss, btns, freeCheckLine(run));
+    }
+  }
+  function afterBurn(run) {
+    const b = run.burn;
+    if (run.kind === 'probe') {
+      if (run.phase === 'burning' && !run.probe.why && run.probe.p2 == null) { showProbeWhy(run); return; }
+      if (run.probe.p2) { run.phase = 'result'; banner(run, b.success ? TXT.success : TXT.miss, [['Next', 'primary', () => endScene(run, 'probe')]]); save(); return; }
+    }
+    run.phase = 'result';
+    resultBanner(run);
+    save();
+    draw(run);
+  }
+  function tryAgain(run) {
+    removeBanner(); run.anim = null; run.burn = null; run.markers = null; run.phase = 'edit';
+    ev('retry'); setHint(run); renderControls(run); draw(run); save();
+  }
+  /** After a success on a version's last scene: play the same board again from the start. */
+  function replayScene(run) {
+    if (!act(run, ['replay']).ok) return;
+    removeBanner(); run.anim = null; run.burn = null; run.markers = null;
+    run.rec.replays = run.replay;
+    run.phase = 'edit'; ev('replay', run.replay); setHint(run); renderControls(run); draw(run); save();
+  }
+  function endScene(run, outcome) {
+    if (run.ended) return;
+    removeBanner(); previewOff(run);
+    act(run, ['end', outcome]);
+    run.rec.live = liveState(run);
+    run.ended = true;
+    run.rec.outcome = outcome; run.rec.endT = now(); run.rec.visibleMs = Math.round(run.visibleMs);
+    if (run.kind === 'probe') REC.probes.push(run.rec); else REC.scenes.push(run.rec);
+    if (run.st.g3) { updateG3(run, outcome); REC.g3.sceneEnd = now(); }
+    if (run.st.top) REC.topPlay = { cond: run.cond, outcome, visibleMs: Math.round(run.visibleMs), strikes: run.rec.attempts.length };
+    REC.cur = null;
+    ev('sceneEnd', [run.def.id, outcome]);
+    save();
+    const cb = run.onDone; teardownScene(); cb();
+  }
+  /** The optional scene's record is kept current while it is played (a closed tab keeps what happened). */
+  function updateG3(run, outcome         ) {
+    const g = REC.g3; if (!g) return;
+    g.sceneVisibleMs = Math.round(run.visibleMs); g.interactions = countInteractions(run.rec); g.strikes = run.rec.attempts.length;
+    g.solved = run.rec.attempts.some((a) => a.success);
+    g.sceneOutcome = outcome || (g.solved ? 'solved' : 'inProgress');
+  }
+  /** Purposeful interactions: board changes, Preview and strikes. A painted square is not an
+   *  interaction by itself (a stroke is one), and turning a piece in the tray is not (a turn on the board is). */
+  function countInteractions(r) { const e = r.edits; return e.place + e.move + e.unplace + e.turnBoard + e.strokes + e.erase + e.undo + r.previewCount + r.attempts.length; }
+  function showTimeUp(run) {
+    // modal: no board input and no controls until Continue
+    run.timeUpFrom = run.timeUpFrom || run.phase;
+    previewOff(run);
+    if (run.drag) run.drag = null;
+    if (run.stroke) endStroke(run);
+    run.phase = 'timeUp';
+    setHint(run, ''); renderControls(run); draw(run);
+    banner(run, TXT.timeUp, [['Continue', 'primary', () => {
+      // skip the rest of this block straight to its questions
+      run.rec.outcome = run.attempts.some((x) => x.success) ? 'solved' : 'timeUp';
+      act(run, ['end', run.rec.outcome]);
+      run.rec.visibleMs = Math.round(run.visibleMs);
+      const blk = run.st.block;
+      run.rec.live = liveState(run);
+      run.ended = true; removeBanner(); run.rec.endT = now(); REC.scenes.push(run.rec); REC.cur = null; save();
+      teardownScene();
+      let i = U.stepIdx + 1;
+      while (U.FLOW[i] && U.FLOW[i].kind === 'scene' && U.FLOW[i].block === blk) { REC.scenes.push({ step: i, sid: U.FLOW[i].scene, cond: U.FLOW[i].cond, block: blk, idx: U.FLOW[i].idx, outcome: 'notReached', visibleMs: 0, attempts: [] }); i++; }
+      go(i);
+    }]]);
+    save();
+  }
+
+  /* ---------- banners */
+  function banner(run, msg, buttons, extra                     ) {
+    removeBanner();
+    const row = h('div', { class: 'row' });
+    for (const [label, cls, fn] of buttons) row.append(h('button', { class: cls, onclick: fn }, label));
+    const b = h('div', { class: 'banner', id: 'banner', role: 'status' }, h('div', { class: 'msg' }, msg), ...(extra ? [extra] : []), row);
+    app.append(b);
+  }
+  function removeBanner() { const b = document.getElementById('banner'); if (b) b.remove(); }
+
+  /* ---------- probes */
+  function probeDonePredict(run) {
+    if (run.phase === 'probePredict') {
+      run.probe.pred1 = [...run.predicted].sort(); ev('probePred', [run.def.id, run.probe.pred1.join('')]);
+      run.phase = 'probeStrike1';
+    } else {
+      run.probe.pred2 = [...run.predicted].sort(); ev('probePred2', [run.def.id, run.probe.pred2.join('')]);
+      run.phase = 'probeStrike2';
+    }
+    setHint(run, 'Tap <b>Strike</b>.'); renderControls(run); draw(run); save();
+  }
+  function showProbeWhy(run) {
+    run.phase = 'probeWhy';
+    const store                      = {}; const err = h('div', { class: 'err' });
+    const ta = textQ('why', TXT.why, store, true);
+    const b = h('div', { class: 'banner', id: 'banner' }, ta, err, h('div', { class: 'row' }, h('button', { class: 'primary', onclick: () => {
+      if (!validText(store.why)) { err.textContent = 'Please write a few words.'; return; }
+      run.probe.why = store.why; ev('probeWhy', run.def.id);
+      removeBanner();
+      // back to the original structure for the one-square change (the board was never changed)
+      run.anim = null; run.burn = null; run.markers = null;
+      run.phase = 'probeEdit'; setHint(run); renderControls(run); draw(run); save();
+    } }, 'Next')));
+    removeBanner(); app.append(b);
+    draw(run); save();
+  }
+  function probeToggle(run, i) {
+    if (run.sc.cells[i] !== FLE.SNOW) return;
+    const pe = run.probe.edit;
+    if (pe && pe.cell !== i) { flashShake(run); return; } // only one change allowed; undo it first
+    if (!act(run, ['toggle', i]).ok) { flashShake(run); return; }
+    run.probe.edit = run.board.edit ? { ...run.board.edit } : null;
+    ev('probeEdit', [i, run.fuel[i]]);
+    renderControls(run); draw(run); save();
+  }
+
+  Object.assign(U, { teardownScene, startScene, liveState, tick, oriOf, dims, trayPieceRect, cellAt, occupancy, currentFuel, setHint, renderControls, firstAction, firstPlace, act, updateG3, probeToggle });
+})();
+</script>
+<script>/*
+ * Participant flow: consent, touch check, rules, blocks, questions, ranking, optional scene, exit; the owner landing; boot.
+ * One of the page modules (load order: ui_common, ui_record, ui_render, ui_preview, ui_input, ui_scene, ui_testhooks, ui_flow). Modules share
+ * nothing but window.FL1R1_UI: functions from another module are called through it when they run, constants
+ * come from modules loaded earlier, and the shared state (RUN, FLOW, stepIdx, FROZEN, T0) lives on it.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL1R1_UI;
+  const { BUILD, COND, DATA, DEV, FLE, FLM, QS, REC, REDUCED, RESUME, STORE, TEST } = U;
+  const condLabel = (...a       ) => U.condLabel(...a);
+  const ev = (...a       ) => U.ev(...a);
+  const freezeRecord = (...a       ) => U.freezeRecord(...a);
+  const h = (...a       ) => U.h(...a);
+  const likert = (...a       ) => U.likert(...a);
+  const now = (...a       ) => U.now(...a);
+  const resetRecord = (...a       ) => U.resetRecord(...a);
+  const save = (...a       ) => U.save(...a);
+  const sheet = (...a       ) => U.sheet(...a);
+  const startScene = (...a       ) => U.startScene(...a);
+  const storedSession = (...a       ) => U.storedSession(...a);
+  const teardownScene = (...a       ) => U.teardownScene(...a);
+  const textQ = (...a       ) => U.textQ(...a);
+  const validText = (...a       ) => U.validText(...a);
+  /* ------------------------------------------------------------------ flow */
+
+  function buildFlow(asg) {
+    // mandate §12 flow: consent, neutral input check, three versions, pairwise choices, optional continuation, exit, completion
+    const steps        = [{ kind: 'consent' }, { kind: 'warmup' }, { kind: 'rules' }];
+    let authored = 0, probesDone = false;
+    asg.order.split('').forEach((c, bi) => {
+      steps.push({ kind: 'blockIntro', cond: c, block: bi });
+      DATA.sets[asg.sets[c]].forEach((sid, si) => {
+        steps.push({ kind: 'scene', cond: c, scene: sid, block: bi, idx: si });
+        if (c !== 'B') authored++;
+      });
+      steps.push({ kind: 'blockQs', cond: c, block: bi });
+      // G1 probes come right after the participant's third authored scene (end of first authored block)
+      if (!probesDone && authored >= 3) {
+        probesDone = true;
+        steps.push({ kind: 'probeIntro' });
+        DATA.probes.forEach((p, k) => steps.push({ kind: 'probe', scene: p, idx: k }));
+      }
+    });
+    steps.push({ kind: 'pairwise' }, { kind: 'finalQs' }, { kind: 'rank' }, { kind: 'rankWhy' }, { kind: 'topIntro' },
+      { kind: 'scene', cond: '@top', scene: DATA.extras[0], block: 3, idx: 0, top: true }, { kind: 'complete' });
+    return steps;
+  }
+  function setSlot(asg) { REC.slot = asg.slot; REC.order = asg.order; REC.rot = asg.rot; REC.sets = asg.sets; REC.display = asg.display || 'ABC'; REC.pairs = asg.pairs || 'AB,AC,BC'; }
+  function start(asg) {
+    resetRecord();
+    setSlot(asg);
+    U.FLOW = buildFlow(asg);
+    U.stepIdx = 0;
+    ev('start', asg.slot);
+    go(0);
+  }
+  function go(i        , resumed          ) {
+    U.stepIdx = i;
+    const st = U.FLOW[i];
+    REC.steps.push(resumed ? [now(), i, st.kind, st.cond || '', st.scene || '', 'resumed'] : [now(), i, st.kind, st.cond || '', st.scene || '']);
+    save();
+    teardownScene();
+    const fn = SHOW[st.kind];
+    if (!fn) throw new Error('no step ' + st.kind);
+    fn(st);
+  }
+  function next() { go(U.stepIdx + 1); }
+  function displayList() { return (REC.display || 'ABC').split(''); }
+
+  /* ------------------------------------------------------------------ static steps */
+  const SHOW                                     = {};
+  const CONSENT_VERSION = 'FL1R1-CONSENT-3-DRAFT';
+  function declinedScreen() { sheet(h('h1', null, 'No problem.'), h('p', null, 'Please return the study in Prolific. Nothing more will be recorded.')); }
+  SHOW.consent = () => {
+    if (REC.consent && REC.consent.declined) { declinedScreen(); return; }
+    sheet(
+      h('h1', null, 'Before you start'),
+      h('p', null, 'This study tests three versions of an early phone puzzle. After a short touch check you will play about nine short scenes, try two quick puzzles about how the fire spreads, and answer some questions. It takes about 40 minutes.'),
+      h('p', { html: '<b>What we record:</b> your taps and drags inside the puzzle and when they happen, your answers, when you leave and return to this page, the time you started, your screen size, your phone’s operating system and browser versions, whether it is set to reduce motion, and how smoothly the page runs. We do not record your name, your Prolific ID, your location, audio or video.' }),
+      h('p', { html: '<b>How it is used:</b> to decide whether to keep developing this prototype. Your typed answers are read by the researcher and analysed with automated text-analysis tools, including AI tools from outside providers, so please don’t type anything personal. Results are reported only as totals and anonymous quotes.' }),
+      h('p', { html: '<b>Your choices:</b> taking part is voluntary. You can stop at any time by returning the study in Prolific. At the end there is an optional extra scene; your payment is the same whether you play it or not.' }),
+      h('p', { html: '<b>How long we keep it:</b> the records are deleted 90 days after the study starts.' }),
+      h('p', { html: '<b>Questions:</b> message the researcher through Prolific with your study code.' }),
+      h('p', null, 'By tapping I agree you confirm you are 18 or older and agree to take part.'),
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => { REC.consent = { version: CONSENT_VERSION, at: now() }; ev('consent', CONSENT_VERSION); if (U.HOSTED) U.HOSTED.agree(next); else next(); } }, 'I agree'),
+      h('button', { style: 'width:100%;margin-top:10px', onclick: () => { ev('consentDeclined'); REC.consent = { version: CONSENT_VERSION, declined: true, at: now() }; freezeRecord(); declinedScreen(); } }, 'I do not agree')
+    );
+  };
+  SHOW.rules = () => {
+    sheet(
+      h('h1', null, 'How fire works'),
+      h('div', { class: 'card' }, ruleSvg(1), h('p', null, 'Fire spreads along fuel that touches side to side.')),
+      h('div', { class: 'card' }, ruleSvg(2), h('p', null, 'A home warms when fire touches its side.')),
+      h('div', { class: 'card' }, ruleSvg(3), h('p', null, 'Corners don’t count.')),
+      h('p', null, 'Your goal in every scene: warm every home.'),
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => { ev('rulesOk'); next(); } }, 'OK')
+    );
+  };
+  SHOW.blockIntro = (st) => {
+    const c = st.cond;
+    sheet(
+      h('h1', null, ['First', 'Second', 'Third'][st.block] + ' version'),
+      h('div', { class: 'card', style: 'font-size:20px' }, h('span', { style: 'font-size:26px' }, COND[c].sym), ' ', h('b', null, COND[c].name)),
+      h('p', null, COND[c].line),
+      h('p', { class: 'small' }, 'Three short scenes.'),
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => { ev('blockStart', c); next(); } }, 'Start')
+    );
+  };
+  SHOW.blockQs = (st) => {
+    const store                      = {}; const key = 'block' + st.block;
+    const err = h('div', { class: 'err' });
+    sheet(
+      h('h1', null, 'About ' + condLabel(st.cond)),
+      likert('cause', 'How much did you feel that YOU made the result happen?', 'Not at all', 'Completely', store),
+      likert('enjoy', 'How much did you enjoy this version?', 'Not at all', 'Very much', store),
+      likert('clear', 'How clear was it why homes did or did not warm?', 'Not clear', 'Completely clear', store),
+      textQ('describe', 'Describe this version in a few words.', store, true),
+      err,
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => {
+        if (!store.cause || !store.enjoy || !store.clear || !validText(store.describe)) { err.textContent = 'Please answer every question (a few words is fine).'; return; }
+        REC.answers[key] = { cond: st.cond, ...store }; ev('blockQs', st.cond); next();
+      } }, 'Next')
+    );
+  };
+  SHOW.probeIntro = () => {
+    sheet(
+      h('h1', null, 'Two quick puzzles about the fire'),
+      h('p', null, 'These paths are already built. There is no Preview here — just say what you think will happen.'),
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => { ev('probeIntro'); next(); } }, 'Start')
+    );
+  };
+  SHOW.finalQs = () => {
+    const store                      = {}; const err = h('div', { class: 'err' });
+    sheet(
+      h('h1', null, 'Almost done'),
+      textQ('rule', 'In your own words: how does the fire decide where it goes?', store, true),
+      textQ('similar', 'Did any version remind you of another game? Which one?', store, false),
+      err,
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => {
+        if (!validText(store.rule)) { err.textContent = 'Please answer the first question (a few words is fine).'; return; }
+        REC.answers.final = store; ev('finalQs'); next();
+      } }, 'Next')
+    );
+  };
+  SHOW.rank = () => {
+    const order = []; const err = h('div', { class: 'err' });
+    const prompt = h('p', { html: '<b>Tap your first choice.</b>' });
+    // list order is counterbalanced per slot (scenes.json assignment[].display) and recorded
+    const cards = displayList().map((c) => {
+      const rankEl = h('span', { class: 'rank' });
+      const b = h('button', { class: 'choice', type: 'button', 'data-c': c, onclick: () => {
+        if (order.includes(c) || order.length >= 2) return;
+        order.push(c); ev('rankTap', c);
+        if (order.length === 2) order.push(['A', 'B', 'C'].find((x) => !order.includes(x)));
+        paint();
+      } }, h('span', { class: 'sym' }, COND[c].sym), h('span', null, h('b', null, COND[c].name), h('br'), h('span', { class: 'small' }, COND[c].line)), rankEl);
+      return { c, b, rankEl };
+    });
+    function paint() {
+      cards.forEach(({ c, b, rankEl }) => { const k = order.indexOf(c); rankEl.textContent = k >= 0 ? String(k + 1) : ''; b.classList.toggle('sel', k >= 0); });
+      prompt.innerHTML = order.length === 0 ? '<b>Tap your first choice.</b>' : order.length === 1 ? '<b>Now tap your second choice.</b>' : 'Your order is set.';
+      confirm.disabled = order.length < 3;
+    }
+    const confirm = (h('button', { class: 'primary', style: 'flex:2', onclick: () => {
+      if (order.length < 3) { err.textContent = 'Please order all three.'; return; }
+      REC.ranking = { order: order.slice(), display: REC.display, at: now() }; ev('rank', order.join('')); next();
+    } }, 'Confirm')                     );
+    sheet(
+      h('h1', null, 'Which version next?'),
+      h('p', null, 'Put the three versions in order. You will play one more short scene of your first choice.'),
+      prompt, ...cards.map((x) => x.b), err,
+      h('div', { style: 'display:flex;gap:10px;margin-top:8px' },
+        h('button', { style: 'flex:1', onclick: () => { order.length = 0; ev('rankReset'); paint(); } }, 'Change'), confirm)
+    );
+    paint();
+  };
+  SHOW.rankWhy = () => {
+    const [first, , last] = REC.ranking.order; const store                      = {}; const err = h('div', { class: 'err' });
+    sheet(
+      h('h1', null, 'Your choices'),
+      textQ('whyFirst', 'Why is ' + condLabel(first) + ' your first choice?', store, true),
+      textQ('whyLast', 'Why is ' + condLabel(last) + ' your last choice?', store, true),
+      err,
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => {
+        if (!validText(store.whyFirst) || !validText(store.whyLast)) { err.textContent = 'Please answer both (a few words is fine).'; return; }
+        REC.answers.rankWhy = store; ev('rankWhy'); next();
+      } }, 'Next')
+    );
+  };
+  /** Neutral touch check (mandate §12 step 2): tap, drag and scroll on plain shapes, before any version. */
+  SHOW.warmup = () => {
+    const t0 = now();
+    const res                      = { t0, tapMs: null, dragMs: null, dragMisses: 0, scrollMs: null, scrolled: false, pointerType: null };
+    const task = h('div', { class: 'card warm', id: 'warmTask' });
+    const doneTask = () => { REC.warmup = res; ev('warmup', [res.tapMs, res.dragMs, res.scrollMs]); next(); };
+    const stepScroll = () => {
+      task.innerHTML = '';
+      const box = h('div', { class: 'scrollbox', id: 'warmScroll' });
+      for (let k = 1; k <= 14; k++) box.append(h('div', { class: 'line' }, 'Line ' + k));
+      const cont = h('button', { class: 'primary', id: 'warmScrollDone', style: 'width:100%', onclick: () => {
+        res.scrollMs = now() - t0; res.scrolled = box.scrollTop > 0; doneTask();
+      } }, 'Continue');
+      box.append(cont);
+      task.append(h('p', null, '3 of 3 · Scroll this list to the end, then tap Continue.'), box);
+    };
+    const stepDrag = () => {
+      task.innerHTML = '';
+      const pad = h('div', { class: 'pad', id: 'warmPad' });
+      const target = h('div', { class: 'target', id: 'warmTarget' });
+      const token = h('div', { class: 'token', id: 'warmToken' });
+      pad.append(target, token);
+      let drag = null;
+      token.addEventListener('pointerdown', (e) => { e.preventDefault(); try { token.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ } drag = { x: e.clientX, y: e.clientY }; res.pointerType = res.pointerType || e.pointerType; });
+      token.addEventListener('pointermove', (e) => { if (drag) token.style.transform = 'translate(' + (e.clientX - drag.x) + 'px,' + (e.clientY - drag.y) + 'px)'; });
+      const drop = () => {
+        if (!drag) return; drag = null;
+        const a = token.getBoundingClientRect(), b = target.getBoundingClientRect();
+        const cx = a.left + a.width / 2, cy = a.top + a.height / 2;
+        if (cx > b.left && cx < b.right && cy > b.top && cy < b.bottom) { res.dragMs = now() - t0; stepScroll(); }
+        else { res.dragMisses++; token.style.transform = ''; }
+      };
+      token.addEventListener('pointerup', drop); token.addEventListener('pointercancel', () => { drag = null; token.style.transform = ''; });
+      task.append(h('p', null, '2 of 3 · Drag the square into the box.'), pad);
+    };
+    const tap = h('button', { class: 'dot', id: 'warmTap', 'aria-label': 'Tap the circle', onclick: (e) => { res.tapMs = now() - t0; res.pointerType = res.pointerType || e.pointerType || null; stepDrag(); } });
+    task.append(h('p', null, '1 of 3 · Tap the circle.'), h('div', { class: 'tapzone' }, tap));
+    sheet(h('h1', null, 'Quick touch check'), h('p', { class: 'small' }, 'This checks that touch works on your phone. It is not part of the puzzle.'), task);
+  };
+  /** Pairwise choices after the three versions (mandate §12 step 6; diagnostics, not gates). */
+  SHOW.pairwise = () => {
+    const pairs = (REC.pairs || 'AB,AC,BC').split(',');
+    const picked                         = {};
+    const err = h('div', { class: 'err' });
+    const rows = pairs.map((pq) => {
+      const row = h('div', { class: 'card pair', 'data-pair': pq });
+      row.append(h('div', { class: 'small' }, 'Which would you rather play?'));
+      const btns = h('div', { class: 'row' });
+      for (const c of pq.split('')) {
+        const b = h('button', { class: 'choice half', type: 'button', 'data-c': c, onclick: () => {
+          picked[pq] = c; [...btns.children].forEach((x) => x.classList.toggle('sel', x === b)); ev('pairTap', [pq, c]);
+        } }, h('span', { class: 'sym' }, COND[c].sym), h('span', null, h('b', null, COND[c].name)));
+        btns.append(b);
+      }
+      row.append(btns);
+      return row;
+    });
+    sheet(
+      h('h1', null, 'Two at a time'),
+      h('p', null, 'For each pair, tap the version you would rather play.'),
+      ...rows, err,
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => {
+        if (pairs.some((pq) => !picked[pq])) { err.textContent = 'Please choose one in each pair.'; return; }
+        REC.pairwise = { pairs, choices: pairs.map((pq) => picked[pq]), at: now() }; ev('pairwise', REC.pairwise.choices.join('')); next();
+      } }, 'Next')
+    );
+  };
+  SHOW.topIntro = () => {
+    const c = REC.ranking.order[0];
+    sheet(
+      h('h1', null, 'One more scene'),
+      h('p', null, 'Here is one more scene in your first choice:'),
+      h('div', { class: 'card', style: 'font-size:20px' }, h('span', { style: 'font-size:26px' }, COND[c].sym), ' ', h('b', null, COND[c].name)),
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => { ev('topStart', c); next(); } }, 'Start')
+    );
+  };
+  SHOW.complete = () => {
+    if (!REC.completed) { REC.completed = true; ev('complete'); }
+    if (!REC.g3) REC.g3 = { offeredAt: now(), choice: null, display: REC.display };
+    // a reload during the optional scene returns to it
+    if (REC.g3.choice && REC.g3.choice !== 'stop' && REC.g3.sceneEnd == null && REC.cur && REC.cur.g3) { startG3Scene(REC.g3.choice); return; }
+    save();
+    const done = REC.g3.choice;
+    if (done) { exitScreen(); return; }
+    const code = h('div', { class: 'card', style: 'font-size:18px' }, 'Completion code: ', ...(U.HOSTED ? U.HOSTED.codeParts() : [h('b', null, 'TEST-ONLY'), h('div', { class: 'small' }, 'Test build: no real code; nothing is sent.')]));
+    const kids = [h('h1', null, 'The study is complete. Thank you!'), code];
+    if (!done) {
+      kids.push(
+        h('h2', null, 'Optional'),
+        h('p', null, 'If you would like, play one more fresh scene (about a minute). Your payment is the same whatever you choose.'),
+        ...displayList().map((c) => h('button', { class: 'choice', type: 'button', 'data-g3': c, onclick: () => g3Choose(c) },
+          h('span', { class: 'sym' }, COND[c].sym), h('span', null, h('b', null, COND[c].name)))),
+        h('button', { style: 'width:100%;margin-top:6px', 'data-g3': 'stop', onclick: () => g3Choose('stop') }, 'No thanks — finish')
+      );
+    } else {
+      kids.push(h('button', { class: 'primary', style: 'width:100%', onclick: finish }, 'Finish'));
+    }
+    if (DEV) kids.push(devRecordPanel());
+    const sh = sheet(...kids); sh.classList.add('done');
+    if (!done) {
+      // which offer buttons were fully on screen at any time before the choice (scrolling counts)
+      const seen = new Set(REC.g3.seen || []);
+      const btns = [...document.querySelectorAll('[data-g3]')];
+      const full = (b) => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight && r.right <= innerWidth; };
+      const mark = () => { REC.g3.seen = [...seen].sort(); REC.g3.fullListSeen = seen.size === btns.length; };
+      btns.forEach((b) => { if (full(b)) seen.add(b.getAttribute('data-g3')); });
+      REC.g3.offerShown = (REC.g3.offerShown || []).concat([[now(), btns.every(full) ? 'allOnScreen' : 'notAllOnScreen', innerWidth, innerHeight]]);
+      mark();
+      try {
+        offerWatch = new IntersectionObserver((entries) => { for (const e of entries) if (e.intersectionRatio >= 0.99) seen.add(e.target.getAttribute('data-g3')); mark(); }, { threshold: [0.99] });
+        btns.forEach((b) => offerWatch.observe(b));
+      } catch (e) { /* no observer: the first view above is what is recorded */ }
+      save();
+    }
+  };
+  let offerWatch = null;
+  function g3Choose(c) {
+    if (offerWatch) { offerWatch.disconnect(); offerWatch = null; }
+    REC.g3.choice = c; REC.g3.at = now(); REC.g3.decisionMs = REC.g3.at - REC.g3.offeredAt;
+    // the tapped button was seen, however little of it was on screen
+    const seen = new Set(REC.g3.seen || []); seen.add(c);
+    REC.g3.seen = [...seen].sort(); REC.g3.fullListSeen = seen.size === document.querySelectorAll('[data-g3]').length;
+    REC.g3.fullListSeenAtChoice = REC.g3.fullListSeen;
+    ev('g3', c);
+    if (c === 'stop') { exitScreen(); return; }
+    startG3Scene(c);
+  }
+  /**
+   * After the optional choice: a continuation question when a scene was played (the end of its flow,
+   * review §4.4), then one short optional exit explanation (mandate §12 step 8), then Finish.
+   */
+  function exitScreen() {
+    const g = REC.g3; const c = g.choice; const played = c && c !== 'stop';
+    const store                      = { cont: g.cont || null };
+    const err = h('div', { class: 'err' });
+    const kids        = [h('h1', null, played ? 'Thanks for playing' : 'Nearly done')];
+    if (played) {
+      const yes = h('button', { class: 'choice half', type: 'button', 'data-cont': 'yes', onclick: () => pick('yes') }, 'Yes');
+      const no = h('button', { class: 'choice half', type: 'button', 'data-cont': 'no', onclick: () => pick('no') }, 'No');
+      const pick = (v) => { store.cont = v; yes.classList.toggle('sel', v === 'yes'); no.classList.toggle('sel', v === 'no'); ev('contTap', v); };
+      kids.push(h('div', { class: 'card' }, h('div', null, 'Would you like to play another scene like this one?'), h('div', { class: 'row' }, yes, no)));
+    }
+    kids.push(textQ('exitWhy', played ? 'In a few words, why did you choose ' + condLabel(c) + '?' : 'In a few words, why did you choose to finish?', store, false));
+    kids.push(err, h('button', { class: 'primary', style: 'width:100%', onclick: () => {
+      if (played && !store.cont) { err.textContent = 'Please answer the first question.'; return; }
+      g.cont = store.cont; g.exitWhy = validText(store.exitWhy) ? store.exitWhy : ''; g.flowDone = true; ev('exit', [g.cont || '', g.exitWhy ? 1 : 0]);
+      finish();
+    } }, 'Finish'));
+    if (DEV) kids.push(devRecordPanel());
+    sheet(...kids);
+    save();
+  }
+  function startG3Scene(c) {
+    teardownScene();
+    startScene({ kind: 'scene', cond: c, scene: DATA.extras[1], block: 4, idx: 0, g3: true }, () => { SHOW.complete(); });
+  }
+  function finish() {
+    if (REC.finishedAt == null) { ev('finish'); REC.finishedAt = now(); }
+    freezeRecord();
+    allDone();
+  }
+  function allDone() {
+    const kids = [h('h1', null, 'All done.'), h('p', null, 'You can close this page now.'), ...(U.HOSTED ? U.HOSTED.doneParts() : [])];
+    if (DEV) kids.push(devRecordPanel());
+    sheet(...kids);
+  }
+  function devRecordPanel() {
+    const json = JSON.stringify(REC);
+    const pre = h('pre', { class: 'rec', id: 'rec' }, json.slice(0, 4000) + (json.length > 4000 ? '…' : ''));
+    const a = h('a', { href: 'data:application/json;charset=utf-8,' + encodeURIComponent(json), download: 'fl1r1-record-' + (REC.slot || 'free') + '.json' }, 'Download session record');
+    return h('div', { class: 'card' }, h('div', { class: 'small' }, 'Owner/test view only: session record (' + json.length + ' bytes). Nothing was sent.'), a, pre);
+  }
+
+  /* ------------------------------------------------------------------ rule diagrams */
+  function ruleSvg(kind) {
+    const s = 26, cells = [];
+    const sq = (x        , y        , fill        , extra         ) => cells.push(`<rect x="${x * s + 2}" y="${y * s + 2}" width="${s - 4}" height="${s - 4}" rx="5" fill="${fill}" ${extra || ''}/>`);
+    const fire = (x, y) => cells.push(`<circle cx="${x * s + s / 2}" cy="${y * s + s / 2}" r="${s / 2 - 3}" fill="#f06a1d"/><circle cx="${x * s + s / 2}" cy="${y * s + s / 2 + 2}" r="${s / 5}" fill="#ffd43b"/>`);
+    const home = (x, y, warm) => cells.push(`<path d="M${x * s + 4} ${y * s + s / 2} L${x * s + s / 2} ${y * s + 4} L${x * s + s - 4} ${y * s + s / 2} V${y * s + s - 4} H${x * s + 4} Z" fill="${warm ? '#9a6b2f' : '#5c6b78'}"/><rect x="${x * s + s / 2 - 4}" y="${y * s + s / 2 + 1}" width="8" height="7" fill="${warm ? '#ffd43b' : '#3a4550'}"/>`);
+    let wpx = 5;
+    if (kind === 1) { fire(0, 0); sq(1, 0, '#f08c3a'); sq(2, 0, '#f08c3a'); sq(3, 0, '#f08c3a'); sq(4, 0, '#b08968'); wpx = 5; }
+    if (kind === 2) { fire(0, 0); sq(1, 0, '#f08c3a'); sq(2, 0, '#f08c3a'); home(3, 0, true); wpx = 4; }
+    if (kind === 3) { fire(0, 1); sq(1, 1, '#f08c3a'); sq(2, 0, '#b08968', 'stroke="#c2410c" stroke-dasharray="3 2"'); home(3, 0, false); wpx = 4; }
+    const hh = kind === 3 ? 2 : 1;
+    const svg = `<svg class="ruleimg" width="${wpx * s}" height="${hh * s}" viewBox="0 0 ${wpx * s} ${hh * s}" aria-hidden="true">${cells.join('')}</svg>`;
+    return h('div', { html: svg });
+  }
+
+  SHOW.scene = (st) => startScene(st, () => next());
+  SHOW.probe = (st) => startScene({ ...st, cond: 'P' }, () => next());
+  /* ------------------------------------------------------------------ owner landing */
+  /** The landing's device facts. Chrome's browser string always says Android 10, so the Android version is shown
+   *  only when Chrome reports the real one (it may not to a page opened from a file); the phone's settings have it. */
+  function deviceLine() {
+    const d = REC.device;
+    const os = /^Android/.test(d.os) ? (d.platform === 'Android' && d.platformVersion ? 'Android ' + String(d.platformVersion).split('.')[0] : 'Android (version not reported to the page)') : d.os;
+    return 'This device: ' + os + ' · ' + d.browser + ' · ' + d.vw + '×' + d.vh + ' at ' + (+d.dpr).toFixed(2) + ' · touch ' + (d.touch ? 'yes' : 'no') + ' · reduced motion ' + (REDUCED ? 'on' : 'off') + ' · no sound in any version'
+      + ' · progress kept ' + (STORE.kind === 'session' ? 'in session storage' : 'in this tab only (session storage refused)');
+  }
+  function landing() {
+    if (U.HOSTED) { invalidLink(); return; } // hosted: never the owner landing, free play or self-test
+    const list = h('div', { class: 'list' });
+    for (const a of DATA.assignment) {
+      list.append(h('button', { 'data-slot': a.slot, onclick: () => { if (!TEST) { try { history.replaceState(null, '', '?slot=' + a.slot); } catch (e) { /* file: or sandbox may refuse; resume then needs ?slot= */ } } start(a); } }, h('b', null, a.slot), '  order ', a.order.split('').map((c) => COND[c].sym).join(' '), '  ', h('span', { class: 'small' }, '(sets A→' + a.sets.A + ', B→' + a.sets.B + ', C→' + a.sets.C + '; lists ' + (a.display || 'ABC').split('').map((c) => COND[c].sym).join(' ') + ')')));
+    }
+    const free = h('div', { class: 'list' });
+    for (const c of ['A', 'B', 'C']) for (const sid of Object.keys(DATA.scenes).filter((k) => DATA.scenes[k].kind !== 'probe')) {
+      free.append(h('button', { 'data-free': c + ':' + sid, onclick: () => { REC.slot = 'free'; startScene({ kind: 'scene', cond: c, scene: sid, block: 9, idx: 0 }, landing); } }, condLabel(c) + ' — ' + sid));
+    }
+    for (const sid of DATA.probes) free.append(h('button', { 'data-free': 'P:' + sid, onclick: () => { REC.slot = 'free'; startScene({ kind: 'probe', cond: 'P', scene: sid, block: 9, idx: DATA.probes.indexOf(sid) }, landing); } }, 'Quick puzzle — ' + sid));
+    // a test slot in progress in this tab (an owner copy opened from a file cannot always keep ?slot= in its address)
+    const prev = RESUME ? storedSession() : null;
+    const pa = prev && prev.rec && prev.rec.slot && prev.rec.finishedAt == null && !(prev.rec.consent && prev.rec.consent.declined) ? DATA.assignment.find((x) => x.slot === prev.rec.slot) : null;
+    const resumeBtn = pa ? h('button', { class: 'primary', id: 'resumeSlot', style: 'width:100%', onclick: () => resumeSession(pa, prev) }, 'Resume test slot ' + pa.slot + ' (in progress in this tab)') : null;
+    const out = h('div', { class: 'small', id: 'selftestOut' });
+    const self = h('button', { id: 'selftest', style: 'width:100%', onclick: () => { const r = runSelfTest(); out.textContent = r.text; ev('selftest', [r.pass, r.total]); } }, 'Run the replay self-test');
+    sheet(
+      h('h1', null, 'Test build — owner and reviewer copy'),
+      h('p', { class: 'small' }, 'Not a participant link: nothing is recorded outside this page and nothing is sent anywhere. Build ' + BUILD.id + ', scenes ' + String(DATA.scenesHash).slice(0, 12) + '.'),
+      h('p', { class: 'small', id: 'deviceLine' }, deviceLine()),
+      ...(resumeBtn ? [resumeBtn] : []),
+      h('h2', null, 'Phone check: replay and state hash'), self, out,
+      h('h2', null, 'Play a full session as a test slot'), list,
+      h('h2', null, 'Free play: any scene in any version'), free
+    );
+  }
+  /** Replays the built-in input logs on this device and compares the state and log hashes with Node's (phone check). */
+  function runSelfTest() {
+    const st = DATA.selftest || { vectors: [], sha: [] };
+    let pass = 0; const lines           = [];
+    for (const v of st.vectors) {
+      const def = DATA.scenes[v.sid]; const sc = FLE.parseScene(def);
+      const rr = FLM.replayLog(sc, v.cond, v.sid, DATA.hashes[v.sid], def.laid || [], v.log);
+      const got = rr.error ? 'error' : FLM.stateHash(rr.board);
+      const ok = !rr.error && got === v.stateHash && FLM.logHash(v.log) === v.logHash;
+      if (ok) pass++;
+      lines.push(v.sid + ' ' + v.cond + ' (' + v.log.length + ' actions): ' + (ok ? 'same hash ' : 'DIFFERENT ') + String(got).slice(0, 12));
+    }
+    let shaOk = 0; for (const [txt, want] of st.sha) if (W.FLHash.sha256Hex(txt) === want) shaOk++;
+    const total = st.vectors.length;
+    const text = (pass === total && shaOk === st.sha.length ? 'PASS: ' : 'FAIL: ') + pass + ' of ' + total + ' input logs reproduce their state hash; SHA-256 known answers ' + shaOk + ' of ' + st.sha.length + '. ' + lines.join('; ') + '.';
+    return { pass, total, shaOk, text };
+  }
+  function invalidLink() {
+    ev('invalidLink');
+    sheet(h('h1', null, 'This link is not valid.'), h('p', null, 'Please go back to the study page and use the link you were given.'));
+  }
+
+  /* ------------------------------------------------------------------ boot */
+  function boot() {
+    if (REDUCED) document.documentElement.classList.add('reduce');
+    if (U.HOSTED) { const g = U.HOSTED.admit(); if (g === 'nocred') { invalidLink(); return; } if (g !== 'ok') return; } // hosted: the Chrome gate and the invitation first
+    const want = QS.get('slot');
+    if (want === null) { landing(); return; }
+    const a = DATA.assignment.find((x) => x.slot === want);
+    if (!a) { invalidLink(); return; } // never show the owner landing to a mistyped participant link
+    const resumed = storedSession();
+    if (RESUME && resumed && resumed.slot === want && resumed.rec && resumed.rec.slot === want) { resumeSession(a, resumed); return; }
+    start(a);
+  }
+  /** Continue the same session: same time base, same record, same step (a running scene is restored). */
+  function resumeSession(a, resumed) {
+    Object.assign(REC, resumed.rec);
+    U.T0 = REC.t0 || Date.parse(REC.startedAt) || U.T0;
+    REC.resumes = (REC.resumes || []).concat([now()]);
+    setSlot(a); U.FLOW = buildFlow(a);
+    ev('resume', resumed.stepIdx);
+    if (REC.finishedAt != null) { U.FROZEN = true; U.stepIdx = U.FLOW.length - 1; allDone(); return; } // a finished session is never restarted or rewritten
+    if (REC.consent && REC.consent.declined) { U.FROZEN = true; declinedScreen(); return; }
+    go(Math.min(resumed.stepIdx, U.FLOW.length - 1), true);
+  }
+
+  Object.assign(U, { start, go, deviceLine });
+  boot();
+})();
+</script>
 </body>
 </html>
