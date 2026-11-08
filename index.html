@@ -94,8 +94,8 @@ button.dot { width: 72px; height: 72px; min-height: 72px; border-radius: 50%; ba
 </head>
 <body>
 <div id="app"></div>
-<script>window.FL1H1_CONFIG = {"receiver":"https://script.google.com/macros/s/AKfycbxrk_rASDT2DlfUpz9-iCuGWMTdkqbts0jyNT0g38zQdTOulQwQBMUcPcjjOlEZoP_T/exec","origin":"https://firstlight-r1.wintermeregame.com","shell":"fl1h1-1"};</script>
-<script>window.FL1R1_BUILD = {"id":"359fe8bd4e69","ruleset":"fl1-rules-r1","scenesHash":"0ccf8220e7a300b3fe9acb971e904e4127b0ddb49b9a192a2c2c98453a8e9278"};</script>
+<script>window.FL1H1_CONFIG = {"receiver":"https://script.google.com/macros/s/AKfycbxrk_rASDT2DlfUpz9-iCuGWMTdkqbts0jyNT0g38zQdTOulQwQBMUcPcjjOlEZoP_T/exec","origin":"https://firstlight-r1.wintermeregame.com","shell":"fl1h1-2"};</script>
+<script>window.FL1R1_BUILD = {"id":"e7abe0b177c1","ruleset":"fl1-rules-r1","scenesHash":"0ccf8220e7a300b3fe9acb971e904e4127b0ddb49b9a192a2c2c98453a8e9278"};</script>
 <script>window.FL1R1_SCENES = {"schema":"fl1r1-scenes-2","ruleset":"fl1-rules-r1","scenesHash":"0ccf8220e7a300b3fe9acb971e904e4127b0ddb49b9a192a2c2c98453a8e9278","conditions":{"A":{"sym":"◆","name":"Pieces","line":"Place the pieces to build a path of fuel, then strike.","input":"drag pieces from the hand onto snow; tap a piece to turn it; drag it to move it or back to the hand","material":"the scene hand; a piece uses its squares","branching":"the T piece where the hand has one (three-home scenes); pieces may also touch side by side","controls":["Undo","Preview","Strike"]},"B":{"sym":"●","name":"Ready path","line":"The path is already built. Check it, then strike.","input":"inspect only: the board cannot be changed","material":"one competent minimal structure built from the same hand (ready-path rule in tools/analyze.ts)","branching":"as laid","controls":["Preview","Strike"]},"C":{"sym":"▲","name":"Draw","line":"Draw a path of fuel with your finger, then strike.","input":"drag across snow to lay fuel square by square (never across a rock, a home or the fire, never corner to corner); tap fuel to remove it","material":"as many squares as the A hand holds; every square uses one","branching":"draw on from any fuel square; branch squares cost one square like any other","controls":["Undo","Preview","Strike"]}},"sets":{"X":["T1","M1a","M2a"],"Y":["T2","M1b","M2b"],"Z":["T3","M1c","M2c"]},"extras":["E1","E2"],"probes":["P1","P2"],"assignment":[{"slot":"P01","order":"ABC","rot":0,"sets":{"A":"X","B":"Y","C":"Z"},"display":"ABC","pairs":"AB,AC,BC"},{"slot":"P02","order":"ABC","rot":1,"sets":{"A":"Y","B":"Z","C":"X"},"display":"ACB","pairs":"AC,BC,AB"},{"slot":"P03","order":"ACB","rot":0,"sets":{"A":"X","B":"Y","C":"Z"},"display":"CAB","pairs":"BC,AB,AC"},{"slot":"P04","order":"ACB","rot":1,"sets":{"A":"Y","B":"Z","C":"X"},"display":"BCA","pairs":"BA,CA,CB"},{"slot":"P05","order":"BAC","rot":1,"sets":{"A":"Y","B":"Z","C":"X"},"display":"BCA","pairs":"CA,CB,BA"},{"slot":"P06","order":"BAC","rot":2,"sets":{"A":"Z","B":"X","C":"Y"},"display":"CAB","pairs":"CB,BA,CA"},{"slot":"P07","order":"BCA","rot":1,"sets":{"A":"Y","B":"Z","C":"X"},"display":"CBA","pairs":"AB,AC,BC"},{"slot":"P08","order":"BCA","rot":2,"sets":{"A":"Z","B":"X","C":"Y"},"display":"ABC","pairs":"AC,BC,AB"},{"slot":"P09","order":"CAB","rot":0,"sets":{"A":"X","B":"Y","C":"Z"},"display":"ABC","pairs":"BC,AB,AC"},{"slot":"P10","order":"CAB","rot":2,"sets":{"A":"Z","B":"X","C":"Y"},"display":"BAC","pairs":"BA,CA,CB"},{"slot":"P11","order":"CBA","rot":0,"sets":{"A":"X","B":"Y","C":"Z"},"display":"CAB","pairs":"CA,CB,BA"},{"slot":"P12","order":"CBA","rot":2,"sets":{"A":"Z","B":"X","C":"Y"},"display":"BCA","pairs":"CB,BA,CA"}],"hashes":{"E1":"09b13681e9f3e79548be6885ea6c75a30253d3ecdbdc874b0fa0acba83a81c56","E2":"3ab43cc9383090e116ab44db3dd2714272ce969f9c15fa14b772056a6d9400a8","M1a":"a7414a88ab7cd921952c19c59b562e5b691838b7e56e76c5959869b68dd8bf56","M1b":"6e3ff571239aa24a81238f9099075758237b1aa0131e7084ceac332051c8b867","M1c":"db1d263e0ebd70ea5ea23e7244c06b2cdbcff7c00f2faa07ec3b015ad72accc8","M2a":"4cb8dbea0509f7f4d5e4c57d9d6c512e98cec3bd7ca97e78a65be9ed33203087","M2b":"4d8ce98e07e139ba24a4a1ea9c211858106f3ddf4918ebbdc8c61a08a7da6260","M2c":"12bdb1b60f0cefc344df81a7bb51a5515c0db615826de6f26ee5717b267ad84e","P1":"fff927e249dcda47ca83afc24f10813e915e7787db1bb889f50391b10ff134bf","P2":"11a0f464ad7fa17387d1279de9312fb8dad3c3638985fe62f3337553c45427a4","T1":"78f8368f38c5807d0b4bed852e78f45d0deef55612bdacb614d0b9cb57d787ce","T2":"7f05c7e4237271861344464b0151db5f89b06449c3b5480d57b6aa4eb3cc313f","T3":"05a72348ce824c0bb111c3b48c079b30259d3ce204ad8df93ed08b7e9c76dcf3"},"selftest":{"vectors":[{"sid":"M1a","cond":"A","log":[["tturn",1],["place",2,4,1],["place",0,2,3],["move",0,4,4],["place",1,1,0],["unplace",2],["move",1,5,1],["undo"],["unplace",0],["place",2,2,4],["bturn",1],["unplace",1],["strike",[1]],["place",0,4,5],["bturn",2],["bturn",0],["strike",null],["bturn",0],["place",1,1,6],["bturn",2],["strike",null],["undo"],["undo"],["bturn",2],["unplace",2],["unplace",0],["tturn",1],["tturn",2],["place",0,4,0],["strike",[1]],["strike",[1]],["place",1,0,1],["strike",[0]],["tturn",2],["tturn",2],["move",1,1,4],["strike",null],["unplace",0],["strike",[0,1]],["strike",[0]]],"stateHash":"68126a7d1a5434c8cdc401d5f5ede08a0a5c99ac410f81d6d79305d3792b96f3","logHash":"e5d219ca7dd542260ee075cc556366e9c9ef564a9977dc35858075fd9e2f368d"},{"sid":"M2b","cond":"C","log":[["stroke",[10,9,16,9]],["stroke",[9,2,3,2,1]],["stroke",[3,10,11,4]],["stroke",[24,23,16]],["stroke",[15,8,15,14]],["undo"],["strike",null],["erase",23],["stroke",[14,7,14,15]],["undo"],["strike",null],["erase",3],["strike",null],["stroke",[44,43,36]],["stroke",[6,5,6,5]],["strike",null],["strike",[]],["erase",44],["stroke",[19,18,25,24]],["undo"],["undo"],["undo"],["strike",null],["stroke",[48,55]],["strike",[2]],["strike",[0,1,2]],["strike",[1]],["strike",null],["strike",null],["strike",[]],["undo"],["stroke",[18,11,4,3]],["strike",null],["strike",null],["undo"],["stroke",[50,49]],["strike",[0,1]],["erase",43],["stroke",[26,25,26,19]],["strike",null]],"stateHash":"8f44fc78d20299c0a2417bb9d74c50562ae0e3c0c04a5a7c808276fbd10cd955","logHash":"bc1eb9ebe9044db35fe2a972d93e2769b476f19fb9a4208717bc602487185a37"},{"sid":"M1c","cond":"B","log":[["strike",[]],["strike",[0]],["strike",[0]],["replay"],["strike",[1]],["strike",[]],["strike",[0,1]],["strike",[1]],["strike",[0,1]],["strike",[]],["strike",[]],["strike",[0]],["strike",[0,1]],["strike",[0,1]],["strike",[1]],["replay"],["strike",[1]],["strike",[0,1]],["strike",[1]],["strike",[0]],["strike",[]],["strike",[]],["strike",[0]],["replay"],["strike",[0,1]],["strike",[]],["strike",[0]],["strike",[1]],["strike",[0,1]],["strike",[1]],["strike",[1]],["strike",[0,1]],["strike",[]],["replay"],["strike",[0]],["strike",[0]],["strike",[]],["strike",[0]],["strike",[0]],["replay"]],"stateHash":"dad5ca4ee493e5b075119ff7d8f03c958aee21a9a5cb0c21e7f376d11e63fdee","logHash":"1c7512a406f0974781a8c860691222e6cfc4dc647445cedeb9dee0b5e82309f9"},{"sid":"P1","cond":"P","log":[["strike",[2]],["toggle",21],["strike",[0]]],"stateHash":"e1bf4f835191d947945426dde416cee2c40da83945cd109367fd3ecc52f7f2ad","logHash":"4912b5297fe8636111e6d0208f8d8451ff8b7635499d8ad7d8908a9870f39050"},{"sid":"E2","cond":"C","log":[["stroke",[50,49]],["stroke",[30,37]],["stroke",[24,17,24]],["stroke",[8,15,8,15,8]],["stroke",[1,0,1,0,1,0]],["strike",[0,1]],["undo"],["undo"],["stroke",[17,10,17,16,15]],["strike",[0,1]],["strike",[]],["strike",null],["undo"],["stroke",[22,15]],["undo"],["stroke",[31,24,17]],["undo"],["stroke",[8,15,22,21]],["undo"],["stroke",[13,20,13,20]],["stroke",[28,29]],["strike",null],["strike",[1]],["undo"],["stroke",[3,4,5,4,3]],["strike",null],["undo"],["stroke",[34,33,32]],["erase",49],["stroke",[48,41]],["undo"],["stroke",[23,24,31,24,17,16,23]],["undo"],["stroke",[51,52,51,44,43]],["undo"],["stroke",[26,19,26,27]],["strike",null],["undo"],["stroke",[34,27]],["undo"]],"stateHash":"0034107a7c25ee156332ec9c1bffbc318ec57d6095706da12531c0fddc69df37","logHash":"7885f70e0bf4afcb107612766b7f0f9ace07729d91d3d09a07c920a03d29a7aa"},{"sid":"M2c","cond":"A","log":[["tturn",0],["tturn",0],["strike",null],["place",2,1,2],["unplace",2],["place",1,1,3],["undo"],["undo"],["place",3,4,2],["tturn",0],["strike",[0,1,2]],["undo"],["strike",null],["place",1,3,0],["move",2,4,7],["strike",null],["place",0,5,1],["unplace",0],["strike",[0,2]],["undo"],["move",1,1,2],["bturn",1],["undo"],["move",0,3,0],["tturn",3],["unplace",1],["bturn",0],["unplace",0],["strike",null],["place",0,0,6],["place",1,4,0],["tturn",3],["undo"],["place",3,5,4],["undo"],["place",3,4,1],["unplace",0],["undo"],["tturn",1],["tturn",1]],"stateHash":"ab7ac75d7afcf002f572ad2a39df441ca3c32ddc4d139fe0fe62fcc6df0e7766","logHash":"434b26fcf08cbb7efd1d8725429224955f842925acf502d9e09feee8d52b75e7"}],"sha":[["abc","ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"],["abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq","248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"]]},"scenes":{"T1":{"id":"T1","kind":"teach","w":7,"h":8,"grid":[".......",".......","...H...",".......",".#.....",".....#.","...F...","......."],"hand":["I3"],"laid":[24,31,38],"tiling":[{"type":"I3","o":1,"x":3,"y":3}]},"T2":{"id":"T2","kind":"teach","w":7,"h":8,"grid":[".......",".....#.","..H....","....#..",".......","#......","..F....","......."],"hand":["I3"],"laid":[23,30,37],"tiling":[{"type":"I3","o":1,"x":2,"y":3}]},"T3":{"id":"T3","kind":"teach","w":7,"h":8,"grid":[".......","..#....",".......",".....H.",".#.....","...#...",".......",".....F."],"hand":["I3"],"laid":[33,40,47],"tiling":[{"type":"I3","o":1,"x":5,"y":4}]},"M1a":{"id":"M1a","kind":"main","w":7,"h":8,"grid":[".......",".......","..H...H","...##..","##.....",".......","...F...","......."],"hand":["L3","L3","I3"],"laid":[17,18,19,26,30,31,32,33,38],"tiling":[{"type":"L3","o":2,"x":2,"y":4},{"type":"L3","o":3,"x":4,"y":3},{"type":"I3","o":0,"x":3,"y":2}]},"M1b":{"id":"M1b","kind":"main","w":7,"h":8,"grid":[".......",".....#H","..#H...",".......","..#....","##.....","..F....","......."],"hand":["L3","L3","I3"],"laid":[18,19,20,25,32,33,38,39,45],"tiling":[{"type":"L3","o":1,"x":3,"y":5},{"type":"L3","o":0,"x":4,"y":3},{"type":"I3","o":0,"x":4,"y":2}]},"M1c":{"id":"M1c","kind":"main","w":7,"h":8,"grid":[".....H.","..H....","..#....",".......","....#..",".......","....F..","......."],"hand":["L3","L3","I3"],"laid":[3,4,10,17,24,31,37,38,45],"tiling":[{"type":"L3","o":2,"x":2,"y":5},{"type":"I3","o":1,"x":3,"y":2},{"type":"L3","o":1,"x":3,"y":0}]},"E1":{"id":"E1","kind":"extra","w":7,"h":8,"grid":[".......",".#.H...","...#.H#","......#","....#..","....#..",".F.....","......."],"hand":["L3","L3","I3"],"laid":[11,18,23,24,25,30,37,44,45],"tiling":[{"type":"L3","o":0,"x":2,"y":5},{"type":"L3","o":1,"x":2,"y":3},{"type":"I3","o":1,"x":4,"y":1}]},"E2":{"id":"E2","kind":"extra","w":7,"h":8,"grid":["..H....","..#.##.","H...#..","....#..",".......",".#.....","...F...","......."],"hand":["L3","L3","I3"],"laid":[1,8,15,16,23,24,31,32,38],"tiling":[{"type":"L3","o":1,"x":3,"y":4},{"type":"L3","o":0,"x":2,"y":2},{"type":"I3","o":1,"x":1,"y":0}]},"M2a":{"id":"M2a","kind":"main","w":7,"h":8,"grid":[".H.....","##....H","..H....","..#....","..#....",".......",".F.....","......."],"hand":["T4","L3","I3","I2"],"laid":[2,4,9,10,11,12,17,24,31,37,38,44],"tiling":[{"type":"L3","o":1,"x":2,"y":5},{"type":"I3","o":1,"x":3,"y":2},{"type":"T4","o":2,"x":3,"y":0},{"type":"I2","o":1,"x":2,"y":0}]},"M2b":{"id":"M2b","kind":"main","w":7,"h":8,"grid":["H......",".....##","......#","H.....H",".......",".....##",".....#.","..F...."],"hand":["T4","L3","I3","I2"],"laid":[7,14,15,16,23,24,25,26,30,36,37,44],"tiling":[{"type":"T4","o":1,"x":1,"y":4},{"type":"I2","o":1,"x":2,"y":2},{"type":"I3","o":0,"x":3,"y":3},{"type":"L3","o":0,"x":0,"y":1}]},"M2c":{"id":"M2c","kind":"main","w":7,"h":8,"grid":["......H",".##....","#......","H..#H..","...#...","...##..",".....F.","......."],"hand":["T4","L3","I3","I2"],"laid":[12,13,16,17,18,19,22,23,26,33,34,40],"tiling":[{"type":"T4","o":3,"x":5,"y":3},{"type":"I3","o":0,"x":3,"y":2},{"type":"I2","o":0,"x":5,"y":1},{"type":"L3","o":3,"x":1,"y":2}]},"P1":{"id":"P1","kind":"probe","w":7,"h":8,"grid":[".H.....",".....H.",".....#.",".......","......H","#......","...F..#","......."],"hand":[],"laid":[38,31,24,23,22,15,8,25,18,32,33]},"P2":{"id":"P2","kind":"probe","w":7,"h":8,"grid":["....H..","#......",".H.....","...#...",".....H.",".......","..F....","......#"],"hand":[],"laid":[37,30,23,16,9,11,38,39,40]}}};</script>
 <script>/*
  * SHA-256 of a string's UTF-8 bytes, in plain code so that the page (which has no network and may
@@ -920,21 +920,27 @@ else (globalThis       ).FLM = FLM;
     const L = run.rec.ptr; if (L && L.length < PTR_CAP) L.push([Math.round(now()), type, c]);
   }
 
-  Object.assign(U, { STORE, REC, resetRecord, now, ev, logError, freezeRecord, save, storedSession, plog });
+  Object.assign(U, { STORE, REC, resetRecord, now, ev, logError, freezeRecord, save, storedSession, plog, deviceInfo });
 })();
 </script>
 <script>/*
- * Hosted study shell (FL-1-R1-H1). In the hosted participant page only, never in the C2 review page. It adds what the
- * hosted stage needs around the unchanged C2 game and flow, and nothing else:
+ * Hosted study shell (FL-1-R1-H1, shell fl1h1-2 with the H2L pre-consent correction). In the hosted participant page only,
+ * never in the C2 review page. It adds what the hosted stage needs around the unchanged C2 game and flow, and nothing else:
  *   - the Android Google Chrome gate, before consent and again at "I agree" (nothing is stored or sent for a refused browser);
  *   - the invitation credential taken from the link fragment (the page's first script moves it out of the address);
- *   - at "I agree", this browser's session {gs, rc} and the first record, whose verified receipt binds the invitation and
- *     must arrive before the touch check begins (the receiver checks slot, order, rotation and lists against the frozen table);
+ *   - consent before the session: until "I agree" the page keeps only the invitation (this tab) and the one-tab lock, and
+ *     holds no study record, assignment, step or clock; nothing is stored for the study and nothing is sent;
+ *   - at "I agree", the session begins (new record, assignment, clock and device facts, the consent step and consent), then
+ *     this browser's session {gs, rc} and the first record, whose verified receipt binds the invitation and must arrive
+ *     before the touch check begins (the receiver checks slot, order, rotation and lists against the frozen table);
+ *   - "I do not agree": nothing is sent and no record is kept; a minimal local guard (the invitation's fingerprint only)
+ *     shows the declined screen again if the same link is reopened in this browser;
  *   - the record uploaded at every step and scene end, every few seconds after the completion code is shown, when the page
  *     is hidden, and as the final record at Finish; each upload counts only when the readback returns its exact digest;
  *   - the completion code shown where the C2 page showed TEST-ONLY, only after the receiver verified a completed record;
- *   - one tab at a time per browser; progress kept in this origin's local storage so the original link resumes it.
- * Loaded after ui_record and before the game modules; the C2 flow calls it at four hook points (hosted/patches.json).
+ *   - one tab at a time per browser; once the session has begun, progress is kept in this origin's local storage so the
+ *     original link resumes it.
+ * Loaded after ui_record and before the game modules; the C2 flow calls it at its hook points (hosted/patches.json).
  */
 'use strict';
 (function () {
@@ -945,12 +951,14 @@ else (globalThis       ).FLM = FLM;
   const sha = (s        )         => W.FLHash.sha256Hex(s);
   const ORIG = W.__fl1h1 || { hash: '', href: '' };
   try { delete W.__fl1h1; } catch (e) { W.__fl1h1 = undefined; }
-  const K_CRED = 'fl1h1-k', K_GRANT = 'fl1h1-g', K_META = 'fl1h1-m', K_OUT = 'fl1h1-o', K_LOCK = 'fl1h1-lock', K_TAB = 'fl1h1-tab';
+  const K_CRED = 'fl1h1-k', K_GRANT = 'fl1h1-g', K_META = 'fl1h1-m', K_OUT = 'fl1h1-o', K_LOCK = 'fl1h1-lock', K_TAB = 'fl1h1-tab', K_DECL = 'fl1h1-d';
   const CRED = /^[A-Za-z0-9_-]{43}$/;
   const HARD = ['no_credential', 'bad_credential', 'unknown_credential', 'bad_session', 'claim_conflict', 'session_conflict', 'session_limit',
     'no_session', 'sid_conflict', 'bad_build', 'after_final'];
   REC.mode = 'hosted';
-  REC.hosted = { v: 'fl1h1-1' };
+  REC.hosted = { v: CFG.shell || 'fl1h1-2' };
+  // no session, clock or start time exists before "I agree" (the C2 module's empty template gets them at the session's start)
+  REC.session = null; REC.t0 = null; REC.startedAt = null;
 
   /* ------------------------------------------------------------------ storage */
   const js = (s) => { try { return s ? JSON.parse(s) : null; } catch (e) { return null; } };
@@ -971,8 +979,9 @@ else (globalThis       ).FLM = FLM;
   const b64url = (n) => btoa(String.fromCharCode.apply(null, Array.from(bytes(n)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
   /* ------------------------------------------------------------------ state */
-  const ST      = { k: null, vfp: null, meta: null, active: false, owner: false, lastStep: -1, lastN: -1, lastBody: null, flushing: false, again: false,
-    retryT: null, retryMs: 2000, codeEls: [], doneEls: [], completeAt: null, finalAt: null, failing: false, timer: null, tab: null, lockT: null };
+  const ST      = { k: null, vfp: null, meta: null, active: false, owner: false, started: false, begin: null, lastStep: -1, lastN: -1, lastBody: null,
+    flushing: false, again: false, retryT: null, retryMs: 2000, codeEls: [], doneEls: [], completeAt: null, finalAt: null, failing: false, timer: null,
+    tab: null, lockT: null };
   const saveMeta = () => lsSet(K_META, ST.meta);
   function grant() { const g = lsGet(K_GRANT) || js(ssGet(K_GRANT)); return g && g.vfp === ST.vfp && /^[0-9a-f]{32}$/.test(g.gs) && CRED.test(g.rc) ? g : null; }
   function clearLocal() { [K_META, K_OUT, K_GRANT, U.STORE_KEY].forEach(lsDel); ssDel(K_GRANT); }
@@ -1030,10 +1039,11 @@ else (globalThis       ).FLM = FLM;
 
   /* ------------------------------------------------------------------ one tab at a time in this browser */
   // Progress is kept in this origin's local storage, which every tab of the browser shares: only the tab that holds the
-  // lock and runs the study writes it (a refused, waiting or invalid tab never does), and a tab that finds the lock taken
-  // by another tab (after its own timers were paused in the background) stops and says so.
+  // lock and runs the study writes it (a refused, waiting or invalid tab never does), only once the session has begun at
+  // "I agree" (nothing before consent), and a tab that finds the lock taken by another tab (after its own timers were
+  // paused in the background) stops and says so.
   const baseStoreSet = U.STORE.set;
-  U.STORE.set = function (v) { if (ST.owner) return baseStoreSet(v); };
+  U.STORE.set = function (v) { if (ST.owner && ST.started) return baseStoreSet(v); };
   const heldByOther = () => { const l = lsGet(K_LOCK); return !!(l && l.id !== ST.tab && Date.now() - l.t < 4000); };
   function unlock() { if (ST.lockT) { clearInterval(ST.lockT); ST.lockT = null; } const m = lsGet(K_LOCK); if (m && m.id === ST.tab) lsDel(K_LOCK); }
   function lostLock() {
@@ -1063,6 +1073,8 @@ else (globalThis       ).FLM = FLM;
     const slot = U.QS.get('slot');
     if (!k || !CRED.test(k) || slot === null) return idle('nocred');
     ST.k = k; ST.vfp = sha('fl1h1-credential-v1:' + k).slice(0, 16);
+    const declined = lsGet(K_DECL);
+    if (declined && declined.vfp === ST.vfp) { forget(); return idle('declined'); }   // this invitation was declined in this browser
     if (!lock()) { otherTab(); return idle('refused'); }
     const meta = lsGet(K_META);
     if (meta && meta.vfp !== ST.vfp) clearLocal();       // another invitation's leftovers in this browser (no other tab runs it: this tab holds the lock)
@@ -1071,6 +1083,11 @@ else (globalThis       ).FLM = FLM;
       if (prog && prog.slot && prog.slot !== slot && meta) { unlock(); reopen(); return idle('refused'); }
     }
     ST.owner = true;
+    // a session that began at "I agree" in this browser resumes; anything else stored for the study is not a session: dropped
+    const prog = U.storedSession();
+    const c = prog && prog.rec ? prog.rec.consent : null;
+    if (c && typeof c === 'object' && !c.declined && prog.slot === slot && prog.rec.slot === slot) ST.started = true;
+    else if (prog) lsDel(U.STORE_KEY);
     ST.meta = lsGet(K_META) || { vfp: ST.vfp, sid: null, seq: 0, okSeq: 0, code: null, test: null, final: false };
     if (ST.meta.okSeq > 0 && grant()) { ST.active = !ST.meta.final; ST.lastBody = null; }
     if (ST.active) setTimeout(flush, 0);
@@ -1178,10 +1195,19 @@ else (globalThis       ).FLM = FLM;
   }
 
   /* ------------------------------------------------------------------ hook points called by the C2 flow */
-  /** "I agree": the gate again, this browser's session, the first record; the touch check begins only after its verified receipt. */
-  async function agree(next) {
+  /** "I agree": the gate again, then the session begins (record, assignment, clock, consent), this browser's session and
+   *  the first record; the touch check begins only after its verified receipt. */
+  async function agree(next, version) {
     if (!androidChrome()) { forget(); refuseBrowser(null); return; }
     if (!ST.k) { stopped('no_credential'); return; }
+    if (!ST.started) {                                            // the session begins here, not at arrival
+      if (!ST.begin) { stopped('no_session'); return; }
+      ST.begin();                                                 // C2 start: new record, assignment, clock, the consent step
+      try { Object.assign(REC.device, U.deviceInfo()); } catch (e) { /* keep the facts already there */ }
+      REC.consent = { version, at: U.now() }; U.ev('consent', version);
+      ST.started = true;
+      U.save();                                                   // kept in this browser from now on (resume)
+    }
     if (!grant()) { const g = { gs: hex(16), rc: b64url(32), vfp: ST.vfp }; lsSet(K_GRANT, g); ssSet(K_GRANT, JSON.stringify(g)); }
     starting();
     enqueue(false);
@@ -1209,13 +1235,17 @@ else (globalThis       ).FLM = FLM;
     } catch (e) { /* never let the upload break the page */ }
     return r;
   };
-  /** Finish freezes the record (C2), then the final record is sent; a decline before any session sends nothing. */
+  /** Finish freezes the record (C2), then the final record is sent. A decline sends nothing and keeps no record: only a
+   *  guard with the invitation's fingerprint stays, so the same link shows the declined screen again in this browser. */
   const baseFreeze = U.freezeRecord;
   U.freezeRecord = function () {
     const r = baseFreeze.apply(this, arguments);
     try {
       if (ST.active && REC.finishedAt != null) { ST.finalAt = Date.now(); enqueue(true); }
-      else if (!ST.active && REC.consent && REC.consent.declined) forget();
+      else if (!ST.active && REC.consent && REC.consent.declined) {
+        if (ST.vfp) lsSet(K_DECL, { vfp: ST.vfp });
+        clearLocal(); unlock(); forget(); ST.owner = false;
+      }
     } catch (e) { /* ignore */ }
     return r;
   };
@@ -1275,7 +1305,10 @@ else (globalThis       ).FLM = FLM;
     ST.doneEls = ST.doneEls.filter((c) => c.isConnected); ST.doneEls.forEach(paintDone);
   }
 
-  U.HOSTED = { admit, agree, codeParts, doneParts, androidChrome };
+  /** The C2 start of this slot's session, kept until "I agree" (hosted/patches.json: start). */
+  function pending(begin) { ST.begin = begin; }
+
+  U.HOSTED = { admit, pending, agree, codeParts, doneParts, androidChrome };
 })();
 </script>
 <script>/*
@@ -2360,6 +2393,7 @@ else (globalThis       ).FLM = FLM;
   }
   function setSlot(asg) { REC.slot = asg.slot; REC.order = asg.order; REC.rot = asg.rot; REC.sets = asg.sets; REC.display = asg.display || 'ABC'; REC.pairs = asg.pairs || 'AB,AC,BC'; }
   function start(asg) {
+    if (U.HOSTED) { U.HOSTED.pending(() => { resetRecord(); setSlot(asg); U.FLOW = buildFlow(asg); U.stepIdx = 0; ev('start', asg.slot); REC.steps.push([now(), 0, 'consent', '', '']); }); SHOW.consent(); return; } // hosted: consent comes first; the record, its assignment and its clock begin at "I agree"
     resetRecord();
     setSlot(asg);
     U.FLOW = buildFlow(asg);
@@ -2395,7 +2429,7 @@ else (globalThis       ).FLM = FLM;
       h('p', { html: '<b>How long we keep it:</b> the records are deleted 90 days after the study starts.' }),
       h('p', { html: '<b>Questions:</b> message the researcher through Prolific with your study code.' }),
       h('p', null, 'By tapping I agree you confirm you are 18 or older and agree to take part.'),
-      h('button', { class: 'primary', style: 'width:100%', onclick: () => { REC.consent = { version: CONSENT_VERSION, at: now() }; ev('consent', CONSENT_VERSION); if (U.HOSTED) U.HOSTED.agree(next); else next(); } }, 'I agree'),
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => { if (U.HOSTED) { U.HOSTED.agree(next, CONSENT_VERSION); return; } REC.consent = { version: CONSENT_VERSION, at: now() }; ev('consent', CONSENT_VERSION); next(); } }, 'I agree'),
       h('button', { style: 'width:100%;margin-top:10px', onclick: () => { ev('consentDeclined'); REC.consent = { version: CONSENT_VERSION, declined: true, at: now() }; freezeRecord(); declinedScreen(); } }, 'I do not agree')
     );
   };
@@ -2751,7 +2785,7 @@ else (globalThis       ).FLM = FLM;
   /* ------------------------------------------------------------------ boot */
   function boot() {
     if (REDUCED) document.documentElement.classList.add('reduce');
-    if (U.HOSTED) { const g = U.HOSTED.admit(); if (g === 'nocred') { invalidLink(); return; } if (g !== 'ok') return; } // hosted: the Chrome gate and the invitation first
+    if (U.HOSTED) { const g = U.HOSTED.admit(); if (g === 'nocred') { invalidLink(); return; } if (g === 'declined') { U.FROZEN = true; declinedScreen(); return; } if (g !== 'ok') return; } // hosted: the Chrome gate and the invitation first
     const want = QS.get('slot');
     if (want === null) { landing(); return; }
     const a = DATA.assignment.find((x) => x.slot === want);
