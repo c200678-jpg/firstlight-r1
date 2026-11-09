@@ -1,0 +1,2663 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src https://script.google.com https://script.googleusercontent.com; form-action 'none'; base-uri 'none'">
+<script>(function(){var h=location.hash;window.__fl2bh={hash:h,href:location.href};if(h){try{history.replaceState(history.state,'',location.pathname+location.search);}catch(e){}}})();</script>
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,nofollow">
+<title>Puzzle prototype (test)</title>
+<style>:root {
+  /* neutral dark background (mandate §8), the same in every version; the board itself stays light for contrast */
+  --bg: #1e2226; --ink: #e8edf1; --muted: #a3aeb7; --card: #2b3137; --line: #434c54;
+  --accent: #4d8dff; --accent-ink: #ffffff; --fire: #f06a1d; --warm: #ffcf3f; --cold: #6aa8ea; --bad: #ff8a4c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overscroll-behavior: none; }
+body { display: flex; justify-content: center; }
+#app { width: 100%; max-width: 480px; min-height: 100%; display: flex; flex-direction: column; position: relative; }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px 4px; min-height: 44px; }
+.badge { font-weight: 650; font-size: 17px; display: flex; align-items: center; gap: 6px; }
+.badge .sym { font-size: 20px; line-height: 1; }
+.dots { display: flex; gap: 6px; align-items: center; }
+.dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); display: block; }
+.dots i.on { background: var(--ink); }
+.dots i.done { background: var(--muted); }
+.hint { padding: 2px 14px 6px; min-height: 30px; color: var(--muted); font-size: 15px; }
+.hint b { color: var(--ink); }
+#stage { position: relative; display: flex; justify-content: center; }
+canvas#board { touch-action: none; display: block; user-select: none; -webkit-user-select: none; }
+.controls { display: flex; gap: 8px; padding: 8px 10px 14px; justify-content: center; flex-wrap: nowrap; }
+.controls button { flex: 0 1 auto; min-width: 0; padding: 10px 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.controls button.grow { flex: 1 1 0; }
+@media (max-width: 380px) { .controls { gap: 6px; padding: 8px 8px 12px; } .controls button { padding: 10px 10px; font-size: 15px; } .controls button.strike { min-width: 84px; } }
+button { font: inherit; border: 0; border-radius: 12px; min-height: 48px; padding: 10px 16px; cursor: pointer;
+  background: var(--card); color: var(--ink); box-shadow: 0 1px 0 rgba(0,0,0,.25), inset 0 0 0 1px var(--line); }
+button.primary { background: var(--accent); color: var(--accent-ink); box-shadow: none; font-weight: 650; }
+button.strike { background: var(--fire); color: #fff; box-shadow: none; font-weight: 700; min-width: 108px; }
+button:disabled { opacity: .45; cursor: default; }
+button.hold.active { background: #4a3d16; box-shadow: inset 0 0 0 2px var(--warm); }
+.grow { flex: 1; }
+.sheet { position: absolute; inset: 0; background: var(--bg); overflow-y: auto; padding: 18px 16px 28px; z-index: 5; }
+.sheet h1 { font-size: 22px; margin: 6px 0 12px; }
+.sheet h2 { font-size: 18px; margin: 18px 0 8px; }
+.sheet p { margin: 8px 0; }
+.card { background: var(--card); border-radius: 14px; padding: 14px; margin: 10px 0; box-shadow: inset 0 0 0 1px var(--line); }
+.likert { display: flex; gap: 6px; justify-content: space-between; margin-top: 8px; }
+.likert button { min-height: 44px; min-width: 0; flex: 1; padding: 0; border-radius: 10px; }
+.likert button.sel { background: var(--accent); color: #fff; box-shadow: none; }
+.ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; margin-top: 4px; }
+textarea { width: 100%; min-height: 76px; font: inherit; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: #22272c; color: var(--ink); resize: vertical; }
+.choice { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; margin: 8px 0; padding: 14px; }
+.choice .sym { font-size: 24px; width: 30px; text-align: center; }
+.choice .rank { margin-left: auto; font-weight: 700; min-width: 24px; text-align: right; }
+.choice.sel { box-shadow: inset 0 0 0 2px var(--accent); }
+.banner { position: absolute; left: 10px; right: 10px; bottom: 10px; background: var(--card); border-radius: 14px; padding: 12px 14px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.45), inset 0 0 0 1px var(--line); z-index: 4; display: flex; flex-direction: column; gap: 10px; }
+.banner .row { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.banner .msg { font-weight: 650; }
+.err { color: var(--bad); font-size: 14px; min-height: 18px; }
+.banner .card { margin: 0; padding: 8px 10px; }
+.sheet.done h1 { font-size: 19px; margin: 2px 0 8px; }
+.sheet.done h2 { font-size: 17px; margin: 10px 0 4px; }
+.sheet.done p { margin: 4px 0; }
+.sheet.done .card { padding: 10px 12px; margin: 6px 0; }
+.sheet.done .choice { padding: 9px 12px; margin: 6px 0; }
+.banner textarea { min-height: 52px; }
+.banner .err:empty { display: none; }
+.small { font-size: 13px; color: var(--muted); }
+.ruleimg { display: block; margin: 6px auto 2px; }
+.list button { width: 100%; text-align: left; margin: 6px 0; }
+pre.rec { white-space: pre-wrap; word-break: break-all; font-size: 11px; background: #22272c; color: var(--ink); padding: 8px; border-radius: 8px; max-height: 260px; overflow: auto; }
+.shake { animation: shake .3s; }
+@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+/* reduced motion: no shake (the reason still shows on the hint line) */
+.reduce .shake { animation: none; }
+/* neutral touch check: plain shapes only */
+.warm p { margin: 4px 0 10px; }
+.tapzone { display: flex; justify-content: center; padding: 18px 0; }
+button.dot { width: 72px; height: 72px; min-height: 72px; border-radius: 50%; background: var(--accent); box-shadow: none; padding: 0; }
+.pad { position: relative; height: 210px; border-radius: 12px; background: #22272c; touch-action: none; overflow: hidden; }
+.pad .target { position: absolute; right: 18px; top: 60px; width: 92px; height: 92px; border: 3px dashed var(--muted); border-radius: 12px; }
+.pad .token { position: absolute; left: 22px; top: 76px; width: 60px; height: 60px; border-radius: 10px; background: #9aa6b0; touch-action: none; }
+.scrollbox { height: 170px; overflow-y: auto; touch-action: pan-y; border-radius: 12px; background: #22272c; padding: 6px 12px; }
+.scrollbox .line { padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--muted); }
+.scrollbox button { margin: 12px 0 6px; }
+/* pairwise choices and the continuation question */
+.row { display: flex; gap: 10px; }
+.choice.half { flex: 1 1 0; margin: 6px 0 0; padding: 12px; justify-content: center; }
+.pair { padding: 10px 12px; }
+/* FL-2B additions: the session strip (homes warmed so far), the mute button, the barn answer row */
+.strip { display: flex; align-items: center; gap: 8px; padding: 0 14px 4px; min-height: 22px; font-size: 14px; color: var(--muted); }
+.strip b { color: var(--warm); font-size: 15px; }
+.strip .homes { display: inline-flex; gap: 3px; flex-wrap: wrap; }
+.strip .homes i { width: 10px; height: 10px; background: var(--warm); display: inline-block; clip-path: polygon(50% 0, 100% 45%, 85% 45%, 85% 100%, 15% 100%, 15% 45%, 0 45%); }
+button.mute { min-height: 36px; min-width: 40px; padding: 4px 8px; font-size: 18px; background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.controls .row.grow { flex: 1 1 100%; gap: 8px; }
+.controls .row.grow .choice.half { margin: 0; padding: 8px 10px; font-size: 14px; min-height: 44px; }
+.controls { flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>window.FL2BH_CONFIG = {"origin":"https://firstlight-r1.wintermeregame.com","path":"/fl2b/","receiver":"https://script.google.com/macros/s/AKfycbxndG51HcRni9csP1vGcdjIg0sntvrt2HyWpangiAJ2G2JXgVBGh9WMjpjG4sjCJa0J/exec","shell":"fl2bh-1","note":"FL-2B receiver: Apps Script web app version 1 (Nov 8, 2026, 10:01 pm CT), bound to the private FL-2B Sheet, execute as the owner, access anyone. The page allows only script.google.com and script.googleusercontent.com."};</script>
+<script>window.FL2B_BUILD = {"id":"09f4719dda09","ruleset":"fl2b-rules-r1","scenesHash":"e3fab1e529e16a9a21c847caee8b897a503ecf8e0930500aa4621eb9aaa331ed","variant":"hosted"};</script>
+<script>window.FL2B_SCENES = {"schema":"fl2b-scenes-1","ruleset":"fl2b-rules-r1","scenesHash":"e3fab1e529e16a9a21c847caee8b897a503ecf8e0930500aa4621eb9aaa331ed","arms":["B","S"],"scored":["K1","K2","K3"],"optional":"K4","probes":["PB","PS"],"teaching":{"B":"TB","S":"TS"},"assignment":[{"slot":"Q01","order":"BS","sym":"r2","pairFirst":"B","optFirst":"B"},{"slot":"Q02","order":"BS","sym":"r2","pairFirst":"B","optFirst":"S"},{"slot":"Q03","order":"BS","sym":"r2","pairFirst":"B","optFirst":"B"},{"slot":"Q04","order":"BS","sym":"r2","pairFirst":"B","optFirst":"S"},{"slot":"Q05","order":"BS","sym":"r2","pairFirst":"S","optFirst":"B"},{"slot":"Q06","order":"BS","sym":"r2","pairFirst":"S","optFirst":"S"},{"slot":"Q07","order":"BS","sym":"r2","pairFirst":"S","optFirst":"B"},{"slot":"Q08","order":"BS","sym":"r2","pairFirst":"S","optFirst":"S"},{"slot":"Q09","order":"SB","sym":"r2","pairFirst":"B","optFirst":"B"},{"slot":"Q10","order":"SB","sym":"r2","pairFirst":"B","optFirst":"S"},{"slot":"Q11","order":"SB","sym":"r2","pairFirst":"B","optFirst":"B"},{"slot":"Q12","order":"SB","sym":"r2","pairFirst":"B","optFirst":"S"},{"slot":"Q13","order":"SB","sym":"r2","pairFirst":"S","optFirst":"B"},{"slot":"Q14","order":"SB","sym":"r2","pairFirst":"S","optFirst":"S"},{"slot":"Q15","order":"SB","sym":"r2","pairFirst":"S","optFirst":"B"},{"slot":"Q16","order":"SB","sym":"r2","pairFirst":"S","optFirst":"S"}],"hashes":{"K1B":"b00a7cfa391be9b2f4b0d27668c294ccc38afea06a1b14a08a5c036ddecc0460","K1Br":"a94c5aec0c17c640ddc7875fb84d5372b7e8bf977ddbf2ff21b26d291b2e5f73","K1S":"1c78ae7b8e679f1ec0aa474877a298f3ccd5adf5e7df8c6f5913bb27dd7dcd17","K1Sr":"fa26e27bd607078b3fdc4761c08c44a234d32d273fe893709e2d41f85aea7114","K2B":"07abd694ff66088f50114cfb9fde4a9624fb0ce9c915868828e1b3a3fc032be6","K2Br":"ac31033096390d790f6a3eadc3d20f5bbce1be2d4102f50304d211583fd169a2","K2S":"1260fc5f474dd7a4644abb53b4dcbfce47772354addd824bee9f8f49106f1948","K2Sr":"1ab2c182e6d22dadf970c2718c5e6ed1782d44b01891a4e97227150522c94a10","K3B":"ba61ba2f90c85c18f00704a83b698a7e3946950605c9097618f5ce35f803c8d9","K3Br":"abee6f3469e736e68d2a226db6732b613ead45e767e0bb739be84b8984e6b56f","K3S":"59f2387128baf6e9963252784f165f25b2bdc50701485227280ebabdf77d98a0","K3Sr":"f9ba3b563efb4d11f2bad28e4e6c42d9b07529aa1753bc1201043d1797f2d673","K4B":"1def85c8b10c88a5d8217a25222e1265e44ec28c1f1b8abeebc26717591fd4a8","K4S":"65e1f2d2daf3f4fcd22897b61c19f008da00fe2ed25ab40c44e856454d2d5b87","PB":"675077bf2bcf4368b325c14df9660e1c7654376d625caf2cfe43cdbbb7cdb0fd","PS":"13b433d015b664565a93df50083644dcea65190b75d60846ac8c1a8efebbeaaa","TB":"89f74eef41f2cf8f58b2ed3c3d3fe46b2818930e6b46d084460f6c67777d73f7","TS":"76acf4b737997eb87ff54fe36d26b85f8e3fc6571644516a74fe4f419d5553df"},"scenes":{"TB":{"id":"TB","kind":"teach","w":7,"h":8,"grid":[".......",".......","..H....",".......",".....#.","#......","..F....","......."],"hand":["I3"],"laid":[],"arm":"B","geom":"TB","variant":"B","sym":"id","tiling":[{"type":"I3","o":1,"x":2,"y":3}]},"TS":{"id":"TS","kind":"teach","w":7,"h":8,"grid":[".......","......#","...H...",".......","..B....","....n..","...Fn..","#......"],"hand":["I3"],"laid":[],"arm":"S","geom":"TS","variant":"S","sym":"id","tiling":[{"type":"I3","o":1,"x":4,"y":2}]},"PB":{"id":"PB","kind":"probe","w":7,"h":8,"grid":["..H....",".......",".....H.",".......","H......","......#","...F...","#......"],"hand":[],"laid":[9,10,17,24,25,26,31,36,37,38],"arm":"B","geom":"PB","variant":"B","sym":"id"},"PS":{"id":"PS","kind":"probe","w":7,"h":8,"grid":["......#",".......",".......","..HB.H.",".....n.",".....n.",".....n.","..Fnnn."],"hand":[],"laid":[30,37,44],"arm":"S","geom":"PS","variant":"S","sym":"id"},"K1B":{"id":"K1B","kind":"main","w":7,"h":8,"grid":[".......","..H....",".......","....H..",".......","......#","..F....","#......"],"hand":["L3","I3","I2"],"laid":[],"arm":"B","geom":"K1","variant":"B","sym":"id","tiling":[{"type":"I2","o":1,"x":2,"y":4},{"type":"L3","o":0,"x":2,"y":2}]},"K1Br":{"id":"K1Br","kind":"main","w":7,"h":8,"grid":["......#","....F..","#......",".......","..H....",".......","....H..","......."],"hand":["L3","I3","I2"],"laid":[],"arm":"B","geom":"K1","variant":"B","sym":"r2","tiling":[{"type":"I2","o":1,"x":4,"y":2},{"type":"L3","o":2,"x":3,"y":4}]},"K1S":{"id":"K1S","kind":"main","w":7,"h":8,"grid":[".......","..H....",".......","....H..",".B..n..","....n.#","..F....","#......"],"hand":["L3","I3","I2"],"laid":[],"arm":"S","geom":"K1","variant":"S","sym":"id","tiling":[{"type":"L3","o":3,"x":2,"y":4},{"type":"I3","o":1,"x":3,"y":1}]},"K1Sr":{"id":"K1Sr","kind":"main","w":7,"h":8,"grid":["......#","....F..","#.n....","..n..B.","..H....",".......","....H..","......."],"hand":["L3","I3","I2"],"laid":[],"arm":"S","geom":"K1","variant":"S","sym":"r2","tiling":[{"type":"L3","o":1,"x":3,"y":2},{"type":"I3","o":1,"x":3,"y":4}]},"K2B":{"id":"K2B","kind":"main","w":7,"h":8,"grid":[".......",".H...H.",".......",".......",".......",".#...#.","...F...","......."],"hand":["L3","L3","I3","I2"],"laid":[],"arm":"B","geom":"K2","variant":"B","sym":"id","tiling":[{"type":"I3","o":1,"x":3,"y":3},{"type":"L3","o":1,"x":3,"y":1},{"type":"I2","o":0,"x":1,"y":2}]},"K2Br":{"id":"K2Br","kind":"main","w":7,"h":8,"grid":[".......","...F...",".#...#.",".......",".......",".......",".H...H.","......."],"hand":["L3","L3","I3","I2"],"laid":[],"arm":"B","geom":"K2","variant":"B","sym":"r2","tiling":[{"type":"I3","o":1,"x":3,"y":2},{"type":"L3","o":3,"x":2,"y":5},{"type":"I2","o":0,"x":4,"y":5}]},"K2S":{"id":"K2S","kind":"main","w":7,"h":8,"grid":[".......",".H...H.","...B.n.",".....n.",".......",".#...#.","...F...","......."],"hand":["L3","L3","I3","I2"],"laid":[],"arm":"S","geom":"K2","variant":"S","sym":"id","tiling":[{"type":"L3","o":2,"x":2,"y":4},{"type":"I2","o":1,"x":4,"y":3},{"type":"L3","o":0,"x":1,"y":2}]},"K2Sr":{"id":"K2Sr","kind":"main","w":7,"h":8,"grid":[".......","...F...",".#...#.",".......",".n.....",".n.B...",".H...H.","......."],"hand":["L3","L3","I3","I2"],"laid":[],"arm":"S","geom":"K2","variant":"S","sym":"r2","tiling":[{"type":"L3","o":0,"x":3,"y":2},{"type":"I2","o":1,"x":2,"y":3},{"type":"L3","o":2,"x":4,"y":4}]},"K3B":{"id":"K3B","kind":"main","w":7,"h":8,"grid":[".......",".H...H.",".......","...H...",".......",".#...#.","...F...","......."],"hand":["T4","L3","I2","I2"],"laid":[],"arm":"B","geom":"K3","variant":"B","sym":"id","tiling":[{"type":"L3","o":2,"x":2,"y":4},{"type":"T4","o":0,"x":1,"y":2},{"type":"I2","o":0,"x":3,"y":1}]},"K3Br":{"id":"K3Br","kind":"main","w":7,"h":8,"grid":[".......","...F...",".#...#.",".......","...H...",".......",".H...H.","......."],"hand":["T4","L3","I2","I2"],"laid":[],"arm":"B","geom":"K3","variant":"B","sym":"r2","tiling":[{"type":"L3","o":0,"x":3,"y":2},{"type":"T4","o":2,"x":3,"y":4},{"type":"I2","o":0,"x":2,"y":6}]},"K3S":{"id":"K3S","kind":"main","w":7,"h":8,"grid":[".......",".H.B.H.",".....n.","...H.n.",".......",".#...#.","...F...","......."],"hand":["T4","L3","I2","I2"],"laid":[],"arm":"S","geom":"K3","variant":"S","sym":"id","tiling":[{"type":"T4","o":0,"x":2,"y":4},{"type":"I2","o":1,"x":4,"y":2},{"type":"L3","o":2,"x":1,"y":2}]},"K3Sr":{"id":"K3Sr","kind":"main","w":7,"h":8,"grid":[".......","...F...",".#...#.",".......",".n.H...",".n.....",".H.B.H.","......."],"hand":["T4","L3","I2","I2"],"laid":[],"arm":"S","geom":"K3","variant":"S","sym":"r2","tiling":[{"type":"T4","o":2,"x":2,"y":2},{"type":"I2","o":1,"x":2,"y":4},{"type":"L3","o":0,"x":4,"y":4}]},"K4B":{"id":"K4B","kind":"extra","w":7,"h":8,"grid":[".......",".H.....",".......",".......",".H...#.",".......","....F..","......."],"hand":["L3","L3","I2","I2"],"laid":[],"arm":"B","geom":"K4","variant":"B","sym":"id","tiling":[{"type":"I2","o":1,"x":4,"y":4},{"type":"I2","o":0,"x":2,"y":4},{"type":"L3","o":2,"x":1,"y":2}]},"K4S":{"id":"K4S","kind":"extra","w":7,"h":8,"grid":[".......",".Hnn...",".......",".B.....",".H...#.",".......","....F..","......."],"hand":["L3","L3","I2","I2"],"laid":[],"arm":"S","geom":"K4","variant":"S","sym":"id","tiling":[{"type":"I2","o":1,"x":4,"y":4},{"type":"I2","o":0,"x":2,"y":4},{"type":"L3","o":2,"x":2,"y":2}]}}};</script>
+<script>/*
+ * SHA-256 of a string's UTF-8 bytes, in plain code so that the page (which has no network and may
+ * run from a file) and the Node replay tool compute state hashes with the same function.
+ * Checked against Node's crypto in tests/replay.test.js.
+ * Loaded as a classic script in the page (global FLHash) and with require() in Node.
+ */
+'use strict';
+
+                                                       
+
+const FLHash = (function () {
+  const K = new Uint32Array([
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+  ]);
+
+  /** UTF-8 bytes of a JavaScript string (lone surrogates become U+FFFD, as TextEncoder does). */
+  function utf8(s        )             {
+    const out           = [];
+    for (let i = 0; i < s.length; i++) {
+      let c = s.charCodeAt(i);
+      if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {
+        const d = s.charCodeAt(i + 1);
+        if (d >= 0xdc00 && d <= 0xdfff) { c = 0x10000 + ((c - 0xd800) << 10) + (d - 0xdc00); i++; } else c = 0xfffd;
+      } else if (c >= 0xd800 && c <= 0xdfff) c = 0xfffd;
+      if (c < 0x80) out.push(c);
+      else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63));
+      else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      else out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    }
+    return Uint8Array.from(out);
+  }
+
+  function bytesHex(msg            )         {
+    const len = msg.length;
+    const total = Math.ceil((len + 9) / 64) * 64;
+    const buf = new Uint8Array(total);
+    buf.set(msg);
+    buf[len] = 0x80;
+    const bits = len * 8;
+    // message length in bits, big-endian, in the last 8 bytes (lengths here stay far below 2^53)
+    const hi = Math.floor(bits / 0x100000000), lo = bits >>> 0;
+    buf[total - 8] = (hi >>> 24) & 255; buf[total - 7] = (hi >>> 16) & 255; buf[total - 6] = (hi >>> 8) & 255; buf[total - 5] = hi & 255;
+    buf[total - 4] = (lo >>> 24) & 255; buf[total - 3] = (lo >>> 16) & 255; buf[total - 2] = (lo >>> 8) & 255; buf[total - 1] = lo & 255;
+    const H = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]);
+    const w = new Uint32Array(64);
+    const rotr = (x        , n        )         => (x >>> n) | (x << (32 - n));
+    for (let off = 0; off < total; off += 64) {
+      for (let t = 0; t < 16; t++) {
+        const j = off + t * 4;
+        w[t] = (buf[j] << 24) | (buf[j + 1] << 16) | (buf[j + 2] << 8) | buf[j + 3];
+      }
+      for (let t = 16; t < 64; t++) {
+        const s0 = rotr(w[t - 15], 7) ^ rotr(w[t - 15], 18) ^ (w[t - 15] >>> 3);
+        const s1 = rotr(w[t - 2], 17) ^ rotr(w[t - 2], 19) ^ (w[t - 2] >>> 10);
+        w[t] = (w[t - 16] + s0 + w[t - 7] + s1) >>> 0;
+      }
+      let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+      for (let t = 0; t < 64; t++) {
+        const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+        const ch = (e & f) ^ (~e & g);
+        const t1 = (h + S1 + ch + K[t] + w[t]) >>> 0;
+        const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+        const maj = (a & b) ^ (a & c) ^ (b & c);
+        const t2 = (S0 + maj) >>> 0;
+        h = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+      }
+      H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0; H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
+      H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0; H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;
+    }
+    let hex = '';
+    for (let i = 0; i < 8; i++) hex += H[i].toString(16).padStart(8, '0');
+    return hex;
+  }
+
+  /** SHA-256 (hex) of the UTF-8 bytes of s. */
+  function sha256Hex(s        )         { return bytesHex(utf8(s)); }
+
+  return { sha256Hex, bytesHex, utf8 };
+})();
+                                      
+
+if (typeof module === 'object' && module && module.exports) module.exports = FLHash;
+else (globalThis       ).FLHash = FLHash;
+</script>
+<script>/*
+ * FL-2B puzzle engine — ruleset id below. (Participant pages carry no project or brand names.)
+ *
+ * ONE propagation law, nothing else (docs/fl2b/FL2B_02_BOARD_RULES.md §2):
+ *   Fire starts at the fire square. It spreads from a burning square to every FUEL square that
+ *   shares a side with it, one step at a time; a fuel square is a placed piece square or a BRUSH
+ *   square (natural fuel already on the board). Each square burns once.
+ *   A HOME warms when a burning square shares a side with it; homes pass no fire.
+ *   A BARN (protected tile) catches fire when a burning square shares a side with it; the strike
+ *   then fails, whatever the homes did. Corners never touch.
+ *   Success: every home warm and no barn caught.
+ *
+ * Not present by design: wind, frost of any thickness, timing rules, multi-hit, double-path,
+ * branch priority, mid-burn control, economy.
+ *
+ * The outcome is a pure function of the final set of fuel squares (placed squares plus brush),
+ * so placement order cannot matter. Preview, strike animation and result all call burn().
+ *
+ * Differences from the FL-1 engine (src/engine.ts): the BRUSH and PROTECT cell kinds ('n', 'B'),
+ * brush as fuel in burn(), missMarkers() and junctions(), the caught barns in the result, the
+ * success rule, and rotate180() for the arm-2 scenes. Everything else is FL-1's, line for line.
+ *
+ * Loaded as a classic script in the page (global FLE) and with require() in Node.
+ */
+'use strict';
+
+/** Scene definition as stored in scenes.json. */
+                           
+                                                                                     
+                                      
+ 
+/** Parsed scene. */
+                        
+                                                                                                                         
+                                                
+ 
+                             
+                                                                         
+                
+                                               
+                  
+                                                 
+                  
+                                                                  
+                                                                                                            
+ 
+                                                                                           
+                               
+
+                                                       
+
+const FLE = (function () {
+  const RULESET = 'fl2b-rules-r1';
+  const SNOW = 0, ROCK = 1, SOURCE = 2, HOME = 3, BRUSH = 4, PROTECT = 5;
+  /** Fixed neighbour order N, E, S, W (all tie-breaks depend on it). */
+  const DIRS                                           = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+
+  /** Base shapes. Screen coordinates: x right, y down. */
+  const PIECE_BASE                        = {
+    I2: [[0, 0], [1, 0]],
+    I3: [[0, 0], [1, 0], [2, 0]],
+    L3: [[0, 0], [0, 1], [1, 1]],
+    T4: [[0, 0], [1, 0], [2, 0], [1, 1]],
+  };
+
+  function normalize(cells       )        {
+    let mx = Infinity, my = Infinity;
+    for (const [x, y] of cells) { if (x < mx) mx = x; if (y < my) my = y; }
+    const out = cells.map(([x, y]) => [x - mx, y - my]);
+    out.sort((a, b) => (a[1] - b[1]) || (a[0] - b[0]));
+    return out;
+  }
+  /** 90 degrees clockwise on screen: right -> down -> left -> up. */
+  function rotateCW(cells       )        { return normalize(cells.map(([x, y]) => [-y, x])); }
+
+  /** distinct orientations, cycle order = repeated CW turns */
+  const ORIENTS                          = {};
+  for (const k of Object.keys(PIECE_BASE)) {
+    const list          = [];
+    let cur = normalize(PIECE_BASE[k]);
+    for (let r = 0; r < 4; r++) {
+      const key = JSON.stringify(cur);
+      if (!list.some((o) => JSON.stringify(o) === key)) list.push(cur);
+      cur = rotateCW(cur);
+    }
+    ORIENTS[k] = list;
+  }
+  function pieceSize(type        )         { return PIECE_BASE[type].length; }
+
+  /**
+   * Scene definition (JSON):
+   *  { id, w, h, grid: string[h] of '.', '#', 'F', 'H', 'n' (brush), 'B' (barn); hand: string[]; laid?: number[] }
+   */
+  function parseScene(def          )        {
+    const w = def.w, h = def.h;
+    if (!Array.isArray(def.grid) || def.grid.length !== h) throw new Error('bad grid ' + def.id);
+    const cells = new Uint8Array(w * h);
+    let source = -1; const homes           = []; const barns           = []; const brush           = [];
+    for (let y = 0; y < h; y++) {
+      const row = def.grid[y];
+      if (row.length !== w) throw new Error('bad row ' + def.id);
+      for (let x = 0; x < w; x++) {
+        const c = row[x], i = y * w + x;
+        if (c === '.') cells[i] = SNOW;
+        else if (c === '#') cells[i] = ROCK;
+        else if (c === 'F') { cells[i] = SOURCE; if (source >= 0) throw new Error('two fires ' + def.id); source = i; }
+        else if (c === 'H') { cells[i] = HOME; homes.push(i); }
+        else if (c === 'n') { cells[i] = BRUSH; brush.push(i); }
+        else if (c === 'B') { cells[i] = PROTECT; barns.push(i); }
+        else throw new Error('bad char ' + c + ' in ' + def.id);
+      }
+    }
+    if (source < 0) throw new Error('no fire ' + def.id);
+    const hand = (def.hand || []).slice();
+    for (const p of hand) if (!PIECE_BASE[p]) throw new Error('bad piece ' + p);
+    const budget = hand.reduce((s, p) => s + pieceSize(p), 0);
+    return { id: def.id, w, h, cells, source, homes, barns, brush, hand, budget, def };
+  }
+
+  /** side neighbours of cell i, in N,E,S,W order */
+  function neighbors(sc       , i        )           {
+    const x = i % sc.w, y = (i - x) / sc.w, out           = [];
+    for (const [dx, dy] of DIRS) {
+      const nx = x + dx, ny = y + dy;
+      if (nx >= 0 && ny >= 0 && nx < sc.w && ny < sc.h) out.push(ny * sc.w + nx);
+    }
+    return out;
+  }
+
+  function emptyFuel(sc       )             { return new Uint8Array(sc.w * sc.h); }
+  /** Placed fuel only (brush is in the scene, not in the fuel set). */
+  function fuelFrom(sc       , list                  )             {
+    const f = emptyFuel(sc);
+    for (const i of list) {
+      if (sc.cells[i] !== SNOW) throw new Error('fuel on non-snow cell ' + i + ' in ' + sc.id);
+      f[i] = 1;
+    }
+    return f;
+  }
+  function fuelList(fuel                   )           { const out           = []; for (let i = 0; i < fuel.length; i++) if (fuel[i]) out.push(i); return out; }
+  function fuelCount(fuel                   )         { let n = 0; for (let i = 0; i < fuel.length; i++) n += fuel[i]; return n; }
+  /** Is square i something the fire spreads through: a placed square on snow, or brush. */
+  function burns(sc       , fuel                   , i        )          { return (sc.cells[i] === SNOW && !!fuel[i]) || sc.cells[i] === BRUSH; }
+
+  /**
+   * THE propagation law. Pure function of (scene, final placed-fuel set); brush comes from the scene.
+   * t[i] = step at which square i is burning (fire square = 0), -1 if never.
+   * homeT[k] = step at which home k warms (one step after a side-neighbour burns), -1 if cold.
+   * barnT[k] = step at which barn k catches (one step after a side-neighbour burns), -1 if safe.
+   */
+  function burn(sc       , fuel                   )             {
+    const n = sc.w * sc.h;
+    const t = new Int16Array(n).fill(-1);
+    t[sc.source] = 0;
+    const q = [sc.source];
+    for (let qi = 0; qi < q.length; qi++) {
+      const c = q[qi];
+      for (const nb of neighbors(sc, c)) {
+        if (burns(sc, fuel, nb) && t[nb] < 0) { t[nb] = t[c] + 1; q.push(nb); }
+      }
+    }
+    const touchT = (cell        )         => {
+      let best = -1;
+      for (const nb of neighbors(sc, cell)) {
+        if (t[nb] >= 0) { const v = t[nb] + 1; if (best < 0 || v < best) best = v; }
+      }
+      return best;
+    };
+    const homeT = sc.homes.map(touchT);
+    const barnT = sc.barns.map(touchT);
+    const warm           = [], cold           = [], caught           = [];
+    homeT.forEach((v, k) => (v >= 0 ? warm : cold).push(k));
+    barnT.forEach((v, k) => { if (v >= 0) caught.push(k); });
+    let steps = 0, burnt = 0, unburnt = 0, brushBurnt = 0, brushUnburnt = 0;
+    for (let i = 0; i < n; i++) {
+      if (t[i] > steps) steps = t[i];
+      if (sc.cells[i] === BRUSH) { if (t[i] >= 0) brushBurnt++; else brushUnburnt++; }
+      else if (fuel[i]) { if (t[i] >= 0) burnt++; else unburnt++; }
+    }
+    for (const v of homeT) if (v > steps) steps = v;
+    for (const v of barnT) if (v > steps) steps = v;
+    const safe = caught.length === 0;
+    return { t, homeT, barnT, warm, cold, caught, safe, steps, burnt, unburnt, brushBurnt, brushUnburnt, success: cold.length === 0 && safe };
+  }
+
+  /**
+   * After a miss: for every cold home, where the fire stopped (endpoint) and the first
+   * square where a connection is missing (gap). 0-1 BFS from all burning squares
+   * through snow (cost 1), unburnt placed fuel (cost 0) and unburnt brush (cost 0) to a square
+   * beside the home. Barns and rock are never crossed. Deterministic: starts in index order,
+   * neighbours N,E,S,W. Says nothing about a caught barn (the result shows that itself).
+   */
+  function missMarkers(sc       , fuel                   , b            )               {
+    const res               = [];
+    const crossable = (i        )          => sc.cells[i] === SNOW || sc.cells[i] === BRUSH;
+    for (const k of b.cold) {
+      const hm = sc.homes[k];
+      const targets = new Set(neighbors(sc, hm).filter(crossable));
+      const n = sc.w * sc.h;
+      const dist = new Int32Array(n).fill(1 << 29);
+      const par = new Int32Array(n).fill(-1);
+      const dq           = [];
+      for (let i = 0; i < n; i++) if (b.t[i] >= 0) { dist[i] = 0; dq.push(i); }
+      let head = 0; const front           = [];
+      let found = -1;
+      // simple 0-1 BFS with a front stack and a back queue
+      const popNext = ()         => (front.length ? (front.pop()          ) : (head < dq.length ? dq[head++] : -1));
+      const done = new Uint8Array(n);
+      for (;;) {
+        const c = popNext();
+        if (c < 0) break;
+        if (done[c]) continue;
+        done[c] = 1;
+        if (targets.has(c) && b.t[c] < 0) { found = c; break; }
+        for (const nb of neighbors(sc, c)) {
+          if (!crossable(nb) || b.t[nb] >= 0 || done[nb]) continue;
+          const w = burns(sc, fuel, nb) ? 0 : 1;
+          if (dist[c] + w < dist[nb]) {
+            dist[nb] = dist[c] + w; par[nb] = c;
+            if (w === 0) front.push(nb); else dq.push(nb);
+          }
+        }
+      }
+      if (found < 0) { res.push({ home: k, endpoint: -1, gap: -1, path: [] }); continue; }
+      const path           = [];
+      for (let c = found; c >= 0; c = par[c]) path.push(c);
+      path.reverse();
+      const endpoint = path[0];
+      const gap = path.find((c) => b.t[c] < 0 && !burns(sc, fuel, c));
+      res.push({ home: k, endpoint, gap: gap === undefined ? -1 : gap, path });
+    }
+    return res;
+  }
+
+  /** Cells of a piece placement (orientation index o, anchor x,y = top-left of orientation box). */
+  function placementCells(type        , o        , x        , y        )        {
+    const ori = ORIENTS[type][o % ORIENTS[type].length];
+    return ori.map(([dx, dy]) => [x + dx, y + dy]);
+  }
+  /** occ: piece id per cell or -1. Pieces go on snow only (never on brush or a barn). */
+  function canPlace(sc       , occ                   , cellsXY       , ignoreId         )          {
+    for (const [x, y] of cellsXY) {
+      if (x < 0 || y < 0 || x >= sc.w || y >= sc.h) return false;
+      const i = y * sc.w + x;
+      if (sc.cells[i] !== SNOW) return false;
+      if (occ[i] >= 0 && occ[i] !== ignoreId) return false;
+    }
+    return true;
+  }
+  /** Junction squares: fuel squares (placed or brush) with 3 or more side contacts among fuel, brush and the fire (homes and barns do not count). */
+  function junctions(sc       , fuel                   )           {
+    const out           = [];
+    for (let i = 0; i < fuel.length; i++) {
+      if (!burns(sc, fuel, i)) continue;
+      let k = 0;
+      for (const nb of neighbors(sc, i)) if (burns(sc, fuel, nb) || sc.cells[nb] === SOURCE) k++;
+      if (k >= 3) out.push(i);
+    }
+    return out;
+  }
+  /** Canonical structure key: sorted placed-fuel indices joined by commas. */
+  function structureKey(fuel                   )         { return fuelList(fuel).join(','); }
+
+  /** The same board turned by 180 degrees (cell i -> w*h-1-i); used for the arm-2 scenes. The hand is unchanged. */
+  function rotate180(def          )           {
+    const grid = def.grid.slice().reverse().map((row) => row.split('').reverse().join(''));
+    const n = def.w * def.h;
+    const laid = (def.laid || []).map((i) => n - 1 - i).sort((a, b) => a - b);
+    return { ...def, grid, laid };
+  }
+  /** Index map of rotate180 and its inverse (the same map). */
+  function rot180Index(w        , h        , i        )         { return w * h - 1 - i; }
+
+  return {
+    RULESET, SNOW, ROCK, SOURCE, HOME, BRUSH, PROTECT, DIRS, PIECE_BASE, ORIENTS,
+    normalize, rotateCW, pieceSize, parseScene, neighbors, emptyFuel, fuelFrom, fuelList, fuelCount, burns,
+    burn, missMarkers, placementCells, canPlace, junctions, structureKey, rotate180, rot180Index,
+  };
+})();
+                                
+
+if (typeof module === 'object' && module && module.exports) module.exports = FLE;
+else (globalThis       ).FLE = FLE;
+</script>
+<script>/*
+ * FL-2B board model: the only code that changes a scene's board. The page sends every board action
+ * through apply() and records it in the scene's input log; the replay tool runs the same apply() on
+ * a recorded log and must reach the same state hash.
+ *
+ * An action is a short array, [name, ...arguments]:
+ *   A (pieces)   ['tturn', id]          turn a piece in the tray (not a board change, not undoable)
+ *                ['place', id, x, y]    tray piece onto the board, top-left of its box at x,y, as turned
+ *                ['move', id, x, y]     a piece on the board to x,y
+ *                ['bturn', id]          turn a piece on the board in place (nudged by one square if needed)
+ *                ['unplace', id]        a piece on the board back to the tray
+ *                ['undo']               reverse the last board change
+ *   all          ['strike', predicted, barn]
+ *                                       burn the structure; predicted = homes the player marked (sorted indices)
+ *                                       or null when no prediction was asked; barn = the player's answer to
+ *                                       "Will the barn catch fire?" (true/false) in a probe with a barn, else null
+ *                ['end', outcome]       the scene ends (solved, skipped, timeUp, probe; quit = Finish now in the optional board)
+ * Anything else, or an action that is not legal in the current state, is refused and changes nothing.
+ * FL-1's drawing actions (stroke, erase), the probe change (toggle) and the replay offer are not in FL-2B.
+ * Loaded as a classic script in the page (global FLM) and with require() in Node.
+ */
+'use strict';
+                                                 
+                                             
+
+                             
+                                                                                                     
+                                                                                                                                                                                              
+                        
+                                                                        
+                                    
+                  
+                    
+                         
+                                  
+            
+ 
+                                                                        
+                                                                              
+
+                                                       
+                                               
+
+const FLM = (function (E        , H           ) {
+  const SCHEMA = 'fl2b-state-1';
+  const UNDO_CAP = 60;
+  const OUTCOMES = ['solved', 'skipped', 'timeUp', 'probe', 'quit'];
+  /** Where a turned piece may go if it does not fit in place: centre first, then one square N, E, S, W. */
+  const NUDGE                                           = [[0, 0], [0, -1], [1, 0], [0, 1], [-1, 0]];
+
+  function newBoard(sc       , cond      , sid        , sceneHash        , laid          )        {
+    const b        = { sid, sceneHash, cond, sc, laid: laid.slice(), pieces: [], fuel: E.emptyFuel(sc), undo: [], strikes: [], outcome: null, n: 0 };
+    if (cond === 'A') b.pieces = sc.hand.map((type, id) => ({ id, type, o: 0, x: 0, y: 0, placed: false }));
+    if (cond === 'P') b.fuel = E.fuelFrom(sc, laid);
+    return b;
+  }
+
+  function occupancy(b       , ignoreId        )             {
+    const occ = new Int16Array(b.sc.w * b.sc.h).fill(-1);
+    for (const p of b.pieces) if (p.placed && p.id !== ignoreId) for (const [x, y] of E.placementCells(p.type, p.o, p.x, p.y)) occ[y * b.sc.w + x] = p.id;
+    return occ;
+  }
+  /** The placed-fuel set the burn uses: placed pieces in A, the given structure in a probe. Brush is in the scene. */
+  function fuelOf(b       )             {
+    if (b.cond !== 'A') return b.fuel;
+    const f = E.emptyFuel(b.sc);
+    for (const p of b.pieces) if (p.placed) for (const [x, y] of E.placementCells(p.type, p.o, p.x, p.y)) f[y * b.sc.w + x] = 1;
+    return f;
+  }
+  function dims(cells            )                   { let w = 0, h = 0; for (const [x, y] of cells) { if (x + 1 > w) w = x + 1; if (y + 1 > h) h = y + 1; } return [w, h]; }
+  function orients(type        )               { return E.ORIENTS[type]; }
+
+  /** Where a turn of a placed piece lands (the same rule the page shows while turning), or null. */
+  function boardTurn(b       , p       )                                             {
+    const n = orients(p.type).length;
+    if (n === 1) return null;
+    const no = (p.o + 1) % n;
+    const [w0, h0] = dims(orients(p.type)[p.o % n]); const [w1, h1] = dims(orients(p.type)[no]);
+    const cx = p.x + (w0 - 1) / 2, cy = p.y + (h0 - 1) / 2;
+    const bx = Math.floor(cx - (w1 - 1) / 2 + 0.5), by = Math.floor(cy - (h1 - 1) / 2 + 0.5);
+    const occ = occupancy(b, p.id);
+    for (const [dx, dy] of NUDGE) {
+      const cells = E.placementCells(p.type, no, bx + dx, by + dy);
+      if (E.canPlace(b.sc, occ, cells, p.id)) return { o: no, x: bx + dx, y: by + dy };
+    }
+    return null;
+  }
+
+  const isInt = (v         )              => typeof v === 'number' && Number.isInteger(v);
+  function pushUndo(b       , snap         )       { b.undo.push(snap); if (b.undo.length > UNDO_CAP) b.undo.shift(); }
+  const snapPieces = (b       )          => b.pieces.map((p) => ({ ...p }));
+  const no = (reason        )              => ({ ok: false, reason });
+
+  /** Apply one action. Refused actions change nothing. */
+  function apply(b       , a        )              {
+    if (!Array.isArray(a) || typeof a[0] !== 'string') return no('not an action');
+    if (b.outcome !== null) return no('scene already ended');
+    const name = a[0];
+    const r = applyInner(b, name, a);
+    if (r.ok) b.n++;
+    return r;
+  }
+  function applyInner(b       , name        , a        )              {
+    const A = b.cond === 'A', P = b.cond === 'P';
+    const piece = (v         )               => (A && isInt(v) && v >= 0 && v < b.pieces.length ? b.pieces[v] : null);
+    switch (name) {
+      case 'tturn': {
+        if (a.length !== 2) return no('arguments');
+        const p = piece(a[1]); if (!p) return no('no such piece');
+        if (p.placed) return no('piece is on the board');
+        const n = orients(p.type).length; if (n === 1) return no('piece does not turn');
+        p.o = (p.o + 1) % n; return { ok: true };
+      }
+      case 'place': case 'move': {
+        if (a.length !== 4) return no('arguments');
+        const p = piece(a[1]); if (!p) return no('no such piece');
+        const x = a[2], y = a[3]; if (!isInt(x) || !isInt(y)) return no('bad position');
+        if ((name === 'place') === p.placed) return no(name === 'place' ? 'piece is already on the board' : 'piece is not on the board');
+        const cells = E.placementCells(p.type, p.o, x, y);
+        if (!E.canPlace(b.sc, occupancy(b, p.id), cells, p.id)) return no('does not fit there');
+        pushUndo(b, snapPieces(b));
+        p.placed = true; p.x = x; p.y = y; return { ok: true };
+      }
+      case 'bturn': {
+        if (a.length !== 2) return no('arguments');
+        const p = piece(a[1]); if (!p) return no('no such piece');
+        if (!p.placed) return no('piece is not on the board');
+        const t = boardTurn(b, p); if (!t) return no('no room to turn');
+        pushUndo(b, snapPieces(b));
+        p.o = t.o; p.x = t.x; p.y = t.y; return { ok: true };
+      }
+      case 'unplace': {
+        if (a.length !== 2) return no('arguments');
+        const p = piece(a[1]); if (!p) return no('no such piece');
+        if (!p.placed) return no('piece is not on the board');
+        pushUndo(b, snapPieces(b));
+        p.placed = false; return { ok: true };
+      }
+      case 'undo': {
+        if (!A) return no('nothing to undo here');
+        if (a.length !== 1) return no('arguments');
+        const s = b.undo.pop(); if (!s) return no('nothing to undo');
+        // a piece that stays in the tray keeps the way it was turned
+        b.pieces = s.map((q) => { const cur = b.pieces[q.id]; return !q.placed && cur && !cur.placed ? { ...q, o: cur.o } : { ...q }; });
+        return { ok: true };
+      }
+      case 'strike': {
+        if (a.length !== 3) return no('arguments');
+        const pr = a[1], barnArg = a[2];
+        if (pr !== null) {
+          if (!Array.isArray(pr)) return no('bad prediction');
+          for (let k = 0; k < pr.length; k++) if (!isInt(pr[k]) || pr[k] < 0 || pr[k] >= b.sc.homes.length || (k > 0 && pr[k] <= pr[k - 1])) return no('bad prediction');
+        }
+        if (barnArg !== null && typeof barnArg !== 'boolean') return no('bad barn answer');
+        const barn                 = barnArg === null ? null : (barnArg           );
+        if (barn !== null && !b.sc.barns.length) return no('no barn to answer for');
+        if (P) {
+          // a probe: one strike, after a prediction that marks at least one home (and the barn answer where there is a barn)
+          if (b.strikes.length >= 1) return no('the probe outcome was already shown');
+          if (pr === null || !(pr            ).length) return no('mark at least one home first');
+          if (b.sc.barns.length && barn === null) return no('answer for the barn first');
+        } else if (barn !== null) return no('the barn is not asked about in play');
+        const fuel = fuelOf(b);
+        const r = E.burn(b.sc, fuel);
+        const st         = { fuel: E.fuelList(fuel), warm: r.warm, cold: r.cold, caught: r.caught, safe: r.safe, success: r.success, steps: r.steps, predicted: pr === null ? null : (pr            ).slice(), barn };
+        b.strikes.push(st);
+        return { ok: true, strike: st };
+      }
+      case 'end': {
+        if (a.length !== 2 || typeof a[1] !== 'string' || !OUTCOMES.includes(a[1])) return no('bad outcome');
+        if (a[1] === 'solved' && !b.strikes.some((s) => s.success)) return no('not solved');
+        if ((a[1] === 'probe') !== P) return no('probe outcome only in probes');
+        b.outcome = a[1]; return { ok: true };
+      }
+      default: return no('unknown action ' + name);
+    }
+  }
+
+  /** Canonical state: everything the board and its outcomes depend on, in a fixed order. */
+  function canonical(b       )          {
+    return {
+      v: SCHEMA, ruleset: E.RULESET, sid: b.sid, sceneHash: b.sceneHash, cond: b.cond,
+      pieces: b.cond === 'A' ? b.pieces.map((p) => [p.id, p.type, p.o, p.placed ? 1 : 0, p.placed ? p.x : -1, p.placed ? p.y : -1]) : null,
+      fuel: E.fuelList(fuelOf(b)),
+      strikes: b.strikes.map((s) => [s.fuel.join(','), s.warm.join(','), s.caught.join(','), s.predicted === null ? null : s.predicted.join(','), s.barn === null ? null : (s.barn ? 1 : 0), s.success ? 1 : 0]),
+      actions: b.n, outcome: b.outcome,
+    };
+  }
+  function stateHash(b       )         { return H.sha256Hex(JSON.stringify(canonical(b))); }
+  /** Hash of the action list itself (times excluded). */
+  function logHash(actions          )         { return H.sha256Hex(JSON.stringify(actions)); }
+
+  /** Rebuild a board from its log. Stops at the first refused action. */
+  function replayLog(sc       , cond      , sid        , sceneHash        , laid          , actions          )                                                     {
+    const b = newBoard(sc, cond, sid, sceneHash, laid);
+    for (let k = 0; k < actions.length; k++) {
+      const r = apply(b, actions[k]);
+      if (!r.ok) return { board: b, error: 'action ' + k + ' (' + JSON.stringify(actions[k]) + ') refused: ' + r.reason, at: k };
+    }
+    return { board: b, error: null, at: actions.length };
+  }
+
+  return { SCHEMA, UNDO_CAP, newBoard, occupancy, fuelOf, boardTurn, apply, canonical, stateHash, logHash, replayLog };
+})(
+  typeof module === 'object' && module ? (require('./engine.ts')          ) : (globalThis       ).FLE,
+  typeof module === 'object' && module ? (require('./sha256.ts')             ) : (globalThis       ).FLHash,
+);
+                                
+
+if (typeof module === 'object' && module && module.exports) module.exports = FLM;
+else (globalThis       ).FLM = FLM;
+</script>
+<script>/*
+ * FL-2B shared page basics: address flags, timing constants, the frozen participant text, and small DOM helpers.
+ * REVIEW BUILD: no network code; the page's Content-Security-Policy blocks all connections. HOSTED BUILD: only the
+ * ui_hosted module talks to the network (the receiver, after consent); the policy allows the receiver's hosts only.
+ * Arms: B = BUDGET (fixed tray of pieces, fixed strike, homes, rock), S = STAKES (the same geometry plus brush and
+ * barns). The participant sees "version 1" and "version 2" in play order; the arm names never appear on the page.
+ * Every Preview, burn and result calls FLE.burn() on the same final placed-fuel set (brush is in the scene).
+ * One of the page modules (load order: ui_common, ui_record, [ui_hosted], ui_render, ui_preview, ui_input, ui_scene,
+ * ui_testhooks, ui_flow). Modules share nothing but window.FL2B_UI: functions from another module are called through
+ * it when they run, constants come from modules loaded earlier, and the shared state (RUN, FLOW, stepIdx, FROZEN, T0)
+ * lives on it.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = (W.FL2B_UI = {})       ;
+  U.RUN = null; // the board or probe on screen (ui_scene)
+  U.FLOW = []; U.stepIdx = 0; // the participant flow and its current step (ui_flow)
+  const ev = (...a       ) => U.ev(...a);
+  const FLE = W.FLE, FLM = W.FLM, DATA = W.FL2B_SCENES, BUILD = W.FL2B_BUILD;
+  const HOSTED_PAGE = !!W.FL2BH_CONFIG;
+  // hosted: the address steers the slot only; test, dev, fast, resume and motion flags are ignored
+  const QS = HOSTED_PAGE
+    ? (() => { const q = new URLSearchParams(location.search), s = q.get('slot'); return new URLSearchParams(s === null ? '' : 'slot=' + encodeURIComponent(s)); })()
+    : new URLSearchParams(location.search);
+  const TEST = QS.get('test') === '1';
+  const DEV = TEST || QS.get('dev') === '1';
+  const FAST = TEST && QS.get('fast') === '1';
+  const RESUME = !TEST || QS.get('resume') === '1'; // tests opt in to resuming with &resume=1
+  const STEP_MS = FAST ? 8 : 140;
+  const TAIL_MS = FAST ? 20 : 650;
+  const SKIP_AFTER_MS = 150000, SKIP_AFTER_TRIES = 4, TEACH_SKIP_MS = 90000, TEACH_SKIP_TRIES = 3;
+  const ARM_ALLOWANCE_MS = 10 * 60000; // visible time per arm (protocol §4, reading 3)
+  const STORE_KEY = 'fl2b-progress';
+  const SAVE_EVERY_TICKS = 8; // 8 x 250 ms: the running board is saved at least every 2 s
+  const REFUSAL_MS = 700;
+  // reduced motion (the phone's setting, or &motion=reduce): no flicker and no shake; the burn still advances
+  // one wave per step at the same speed in both arms, so outcome timing does not change
+  const REDUCED = QS.get('motion') === 'reduce' || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const IDLE_MS = 10000; // visible time with no touch for longer than this counts as idle
+  const PTR_CAP = 4000; // pointer entries kept per board
+
+  /* ------------------------------------------------------------------ text (frozen) */
+  /** The two arms. `pos` labels come from the play order; nothing on the page says budget, stakes, brush rule or barn rule beyond these lines. */
+  const ARM = {
+    B: { key: 'B', card: 'Use the pieces in the tray to carry the fire to every home, then strike.', reminder: 'Carry the fire to every home.' },
+    S: { key: 'S', card: 'Dry brush on the ground burns too. The barn must not catch fire.', reminder: 'Brush burns too. The barn must not catch fire.' },
+  };
+  const POS = ['Version 1', 'Version 2'];
+  const TXT = {
+    teachHint: 'Drag a piece onto the snow. <b>Tap a piece to turn it.</b>',
+    teachTurn: 'The piece is lying the wrong way. <b>Tap the piece to turn it.</b>',
+    teachBarn: 'Fire touching the barn’s side sets it alight. <b>Find another way round</b> — brush burns too.',
+    previewLine: 'Hold <b>Preview</b> to see what will burn.',
+    mainHint: { B: 'Build a path of fuel from the fire to every home.', S: 'Build a path of fuel from the fire to every home. The barn must not catch fire.' },
+    success: 'Every home is warm.',
+    miss: 'Not every home is warm.',
+    barn: 'The barn caught fire.',
+    barnAndMiss: 'The barn caught fire, and not every home is warm.',
+    dropFail: 'A piece only fits on empty snow.',
+    turnFail: 'No room to turn it here.',
+    timeUp: 'Time for this version is up.',
+    probePredict: 'What do you think will happen? <b>Tap the homes</b> you think will warm.',
+    probeBarn: 'Will the barn catch fire?',
+    probeReady: 'Tap <b>Strike</b> when you are ready.',
+    why: 'Why did that happen?',
+    strip: 'Homes warmed so far',
+  };
+
+  const app = (document.getElementById('app')               );
+  /* ------------------------------------------------------------------ helpers */
+  function h(tag        , attrs      , ...kids       )              {
+    const e = document.createElement(tag);
+    if (attrs) for (const k of Object.keys(attrs)) {
+      if (k === 'class') e.className = attrs[k];
+      else if (k === 'html') e.innerHTML = attrs[k];
+      else if (k.startsWith('on')) e.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] !== false && attrs[k] != null) e.setAttribute(k, attrs[k]);
+    }
+    for (const kid of kids.flat()) if (kid != null) e.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+    return e;
+  }
+  function clear() { app.innerHTML = ''; }
+  function sheet(...kids) { clear(); const s = h('div', { class: 'sheet' }, ...kids); app.append(s); s.scrollTop = 0; return s; }
+  /** "Version 1" / "Version 2": the arm's label by its position in this participant's play order. */
+  function armLabel(armKey) { const order = (U.REC && U.REC.order) || 'BS'; const k = order.indexOf(armKey); return POS[k < 0 ? 0 : k]; }
+
+  function likert(id, label, lo, hi, store) {
+    const wrap = h('div', { class: 'card' }, h('div', null, label));
+    const row = h('div', { class: 'likert', role: 'radiogroup', 'aria-label': label });
+    for (let v = 1; v <= 7; v++) {
+      const b = h('button', { type: 'button', 'data-v': v, onclick: () => { store[id] = v; [...row.children].forEach((x) => x.classList.toggle('sel', x === b)); ev('likert', [id, v]); } }, String(v));
+      row.append(b);
+    }
+    wrap.append(row, h('div', { class: 'ends' }, h('span', null, lo), h('span', null, hi)));
+    return wrap;
+  }
+  function textQ(id, label, store, required          ) {
+    const ta = (h('textarea', { 'data-q': id, maxlength: '600', 'aria-label': label })                       );
+    ta.addEventListener('input', () => { store[id] = ta.value; });
+    return h('div', { class: 'card' }, h('div', null, label + (required ? '' : ' (optional)')), ta);
+  }
+  function validText(s) { return typeof s === 'string' && s.trim().length >= 2; }
+
+  Object.assign(U, { FLE, FLM, DATA, BUILD, QS, TEST, DEV, RESUME, HOSTED_PAGE, STEP_MS, TAIL_MS, SKIP_AFTER_MS, SKIP_AFTER_TRIES, TEACH_SKIP_MS, TEACH_SKIP_TRIES, ARM_ALLOWANCE_MS, STORE_KEY, SAVE_EVERY_TICKS, REFUSAL_MS, REDUCED, IDLE_MS, PTR_CAP, ARM, POS, TXT, app, h, clear, sheet, armLabel, likert, textQ, validText });
+})();
+</script>
+<script>/*
+ * FL-2B instrumentation: the session record (schema fl2b-record-1), events, errors, the pointer log, and where
+ * progress is kept for a reload.
+ * One of the page modules (load order: ui_common, ui_record, [ui_hosted], ui_render, ui_preview, ui_input, ui_scene,
+ * ui_testhooks, ui_flow). Modules share nothing but window.FL2B_UI.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL2B_UI;
+  const { BUILD, DATA, DEV, FLE, HOSTED_PAGE, PTR_CAP, REDUCED, STORE_KEY, TEST } = U;
+  const cellAt = (...a       ) => U.cellAt(...a);
+  const deviceLine = (...a       ) => U.deviceLine(...a);
+  const liveState = (...a       ) => U.liveState(...a);
+  const updateG3 = (...a       ) => U.updateG3(...a);
+  /* ------------------------------------------------------------------ progress kept for a reload */
+  /**
+   * Review page: the session is kept in this tab's session storage (or the tab's window name when a page opened
+   * from a file has no storage); nothing leaves the tab. Hosted page: the session is kept in local storage of the
+   * study's own origin, so reopening the original link in this browser resumes it after the tab was closed;
+   * ui_hosted uploads it to the receiver. If storage is refused, the tab's window name is used (ui_hosted then stops
+   * before consent: the study needs storage).
+   */
+  const STORE = (() => {
+    try {
+      const k = STORE_KEY + '-check';
+      if (HOSTED_PAGE) {
+        localStorage.setItem(k, '1'); localStorage.removeItem(k);
+        return { kind: 'local', get: ()                => localStorage.getItem(STORE_KEY), set: (v        ) => localStorage.setItem(STORE_KEY, v) };
+      }
+      sessionStorage.setItem(k, '1'); sessionStorage.removeItem(k);
+      return { kind: 'session', get: ()                => sessionStorage.getItem(STORE_KEY), set: (v        ) => sessionStorage.setItem(STORE_KEY, v) };
+    } catch (e) {
+      const P = STORE_KEY + ':';
+      return { kind: 'tab', get: ()                => (String(window.name || '').startsWith(P) ? String(window.name).slice(P.length) : null), set: (v        ) => { window.name = P + v; } };
+    }
+  })();
+
+  /* ------------------------------------------------------------------ record */
+  U.T0 = Date.now(); // absolute time base; a resumed session keeps the original one
+  /** An anonymous random session id: it identifies the session record, nothing else. */
+  function newSessionId() {
+    try { const a = new Uint8Array(8); crypto.getRandomValues(a); return Array.from(a, (x) => x.toString(16).padStart(2, '0')).join(''); }
+    catch (e) { return Math.floor(Math.random() * 2 ** 52).toString(16).padStart(13, '0'); }
+  }
+  const EMPTY = () => ({
+    session: newSessionId(), slot: null, order: null, sym: null, pairSide: null, optList: null,
+    t0: U.T0, startedAt: new Date(U.T0).toISOString(), steps: [], scenes: [], probes: [], cur: null,
+    answers: {}, pairwise: null, meaning: null, warmed: 0, mute: false, muteLog: [], g3: null, completed: false, resumes: [], errors: [], events: [],
+  });
+  const REC      = Object.assign({
+    schema: 'fl2b-record-1', build: BUILD.id, ruleset: FLE.RULESET, scenesHash: DATA.scenesHash,
+    mode: HOSTED_PAGE ? 'hosted' : TEST ? 'test' : DEV ? 'dev' : 'owner-local', device: deviceInfo(),
+  }, EMPTY());
+  /** A new slot session always starts from an empty record (owner free play beforehand leaves no trace in it). */
+  function resetRecord() {
+    U.T0 = Date.now();
+    Object.assign(REC, EMPTY());
+    delete REC.consent; delete REC.finishedAt;
+  }
+  function now() { return Date.now() - U.T0; }
+  function ev(type        , data      ) { REC.events.push([now(), type, data === undefined ? 0 : data]); }
+  /** Coarse device facts only: no model name and no full browser string. */
+  function deviceInfo() {
+    const ua = navigator.userAgent || '';
+    const m = (re) => { const r = ua.match(re); return r ? r[1] : null; };
+    const and = m(/Android (\d+)/), ios = m(/(?:iPhone|iPad|iPod).*? OS (\d+)_/);
+    const os = and ? 'Android ' + and : ios ? 'iOS ' + ios : /Windows/.test(ua) ? 'Windows' : /CrOS/.test(ua) ? 'ChromeOS' : /Mac OS X/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : 'other';
+    const edg = m(/Edg[A-Za-z]*\/(\d+)/), sam = m(/SamsungBrowser\/(\d+)/), ff = m(/(?:Firefox|FxiOS)\/(\d+)/), cr = m(/(?:Chrome|CriOS)\/(\d+)/), sf = m(/Version\/(\d+)[\d.]* (?:Mobile\/\S+ )?Safari/);
+    const browser = edg ? 'Edge ' + edg : sam ? 'Samsung Internet ' + sam : ff ? 'Firefox ' + ff : cr ? 'Chrome ' + cr : sf ? 'Safari ' + sf : 'other';
+    return { vw: innerWidth, vh: innerHeight, dpr: devicePixelRatio || 1, touch: 'ontouchstart' in window || navigator.maxTouchPoints > 0, os, browser, reducedMotion: REDUCED, store: STORE.kind }                       ;
+  }
+  // Chrome's reduced browser string freezes the Android version; ask for the real OS version only (no model)
+  try {
+    const uad = (navigator       ).userAgentData;
+    if (uad && uad.getHighEntropyValues) uad.getHighEntropyValues(['platformVersion']).then((v) => {
+      REC.device.platform = v.platform; REC.device.platformVersion = v.platformVersion;
+      const el = document.getElementById('deviceLine'); if (el) el.textContent = deviceLine();
+    }, () => {});
+  } catch (e) { /* not available */ }
+  /** Errors are kept as categories with the step and scene, never as raw messages. */
+  function logError(cat) {
+    try {
+      if (!REC.errors) REC.errors = [];
+      if (REC.errors.length < 50) REC.errors.push([now(), cat, U.FLOW[U.stepIdx] ? U.FLOW[U.stepIdx].kind : '', U.RUN && U.RUN.def ? U.RUN.def.id : '']);
+      ev('error', cat); save();
+    } catch (e) { /* never let logging break the page */ }
+  }
+  addEventListener('error', () => logError('script-error'));
+  addEventListener('unhandledrejection', () => logError('promise-rejection'));
+  // leaving and returning is logged on every screen, not only during boards (until the record is final)
+  document.addEventListener('visibilitychange', () => { if (U.FROZEN) return; ev('vis', document.visibilityState); if (U.RUN) U.RUN.lastTick = performance.now(); save(); });
+  /** After "All done" or "I do not agree" the stored record is final: nothing more is written. */
+  U.FROZEN = false;
+  function freezeRecord() { save(); U.FROZEN = true; }
+  function save() {
+    if (U.FROZEN) return;
+    if (U.RUN && !U.RUN.dead && !U.RUN.ended) { U.RUN.rec.live = liveState(U.RUN); if (U.RUN.st.g3) updateG3(U.RUN); }
+    try { STORE.set(JSON.stringify({ rec: REC, stepIdx: U.stepIdx, slot: REC.slot })); } catch (e) { /* storage refused: play continues */ }
+  }
+
+  function storedSession() { try { return JSON.parse(STORE.get() || 'null'); } catch (e) { return null; } }
+  /** Pointer log: down, cell changes while held, up, cancel, extra finger; the board square under the finger. */
+  function plog(run, type, p) {
+    const c = cellAt(run, p.x, p.y);
+    run.lastInput = performance.now();
+    if (type === 'm' && c === run.lastPtrCell) return;
+    run.lastPtrCell = type === 'u' || type === 'c' ? -2 : c;
+    const L = run.rec.ptr; if (L && L.length < PTR_CAP) L.push([Math.round(now()), type, c]);
+  }
+
+  Object.assign(U, { STORE, REC, resetRecord, now, ev, logError, freezeRecord, save, storedSession, plog, deviceInfo });
+})();
+</script>
+<script>/*
+ * Hosted study shell (FL-1-R1-H1, shell fl2bh-2 with the H2L pre-consent correction). In the hosted participant page only,
+ * never in the review page. It adds what the hosted stage needs around the game and flow, and nothing else:
+ *   - the Android Google Chrome gate, before consent and again at "I agree" (nothing is stored or sent for a refused browser);
+ *   - the invitation credential taken from the link fragment (the page's first script moves it out of the address);
+ *   - consent before the session: until "I agree" the page keeps only the invitation (this tab) and the one-tab lock, and
+ *     holds no study record, assignment, step or clock; nothing is stored for the study and nothing is sent;
+ *   - at "I agree", the session begins (new record, assignment, clock and device facts, the consent step and consent), then
+ *     this browser's session {gs, rc} and the first record, whose verified receipt binds the invitation and must arrive
+ *     before the touch check begins (the receiver checks slot, order, rotation and lists against the frozen table);
+ *   - "I do not agree": nothing is sent and no record is kept; a minimal local guard (the invitation's fingerprint only)
+ *     shows the declined screen again if the same link is reopened in this browser;
+ *   - the record uploaded at every step and scene end, every few seconds after the completion code is shown, when the page
+ *     is hidden, and as the final record at Finish; each upload counts only when the readback returns its exact digest;
+ *   - the completion code shown where the review page shows TEST-ONLY, only after the receiver verified a completed record;
+ *   - one tab at a time per browser; once the session has begun, progress is kept in this origin's local storage so the
+ *     original link resumes it.
+ * Loaded after ui_record and before the game modules.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL2B_UI;
+  const CFG = W.FL2BH_CONFIG || {};
+  const { REC, h, sheet } = U;
+  const sha = (s        )         => W.FLHash.sha256Hex(s);
+  const ORIG = W.__fl2bh || { hash: '', href: '' };
+  try { delete W.__fl2bh; } catch (e) { W.__fl2bh = undefined; }
+  const K_CRED = 'fl2bh-k', K_GRANT = 'fl2bh-g', K_META = 'fl2bh-m', K_OUT = 'fl2bh-o', K_LOCK = 'fl2bh-lock', K_TAB = 'fl2bh-tab', K_DECL = 'fl2bh-d';
+  const CRED = /^[A-Za-z0-9_-]{43}$/;
+  const HARD = ['no_credential', 'bad_credential', 'unknown_credential', 'bad_session', 'claim_conflict', 'session_conflict', 'session_limit',
+    'no_session', 'sid_conflict', 'bad_build', 'after_final'];
+  REC.mode = 'hosted';
+  REC.hosted = { v: CFG.shell || 'fl2bh-2' };
+  // no session, clock or start time exists before "I agree" (the record module gives them at the session's start)
+  REC.session = null; REC.t0 = null; REC.startedAt = null;
+
+  /* ------------------------------------------------------------------ storage */
+  const js = (s) => { try { return s ? JSON.parse(s) : null; } catch (e) { return null; } };
+  const lsGet = (k) => { try { return js(localStorage.getItem(k)); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+  const lsDel = (k) => { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } };
+  const ssGet = (k) => { try { return sessionStorage.getItem(k); } catch (e) { return null; } };
+  const ssSet = (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) { /* ignore */ } };
+  const ssDel = (k) => { try { sessionStorage.removeItem(k); } catch (e) { /* ignore */ } };
+  function capable() {
+    try {
+      const t = 'fl2bh-t'; localStorage.setItem(t, '1'); localStorage.removeItem(t); sessionStorage.setItem(t, '1'); sessionStorage.removeItem(t);
+      return !!(W.crypto && W.crypto.getRandomValues && W.fetch);
+    } catch (e) { return false; }
+  }
+  function bytes(n) { const a = new Uint8Array(n); W.crypto.getRandomValues(a); return a; }
+  const hex = (n) => Array.from(bytes(n), (b) => b.toString(16).padStart(2, '0')).join('');
+  const b64url = (n) => btoa(String.fromCharCode.apply(null, Array.from(bytes(n)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  /* ------------------------------------------------------------------ state */
+  const ST      = { k: null, vfp: null, meta: null, active: false, owner: false, started: false, begin: null, lastStep: -1, lastN: -1, lastBody: null,
+    flushing: false, again: false, retryT: null, retryMs: 2000, codeEls: [], doneEls: [], completeAt: null, finalAt: null, failing: false, timer: null,
+    tab: null, lockT: null };
+  const saveMeta = () => lsSet(K_META, ST.meta);
+  function grant() { const g = lsGet(K_GRANT) || js(ssGet(K_GRANT)); return g && g.vfp === ST.vfp && /^[0-9a-f]{32}$/.test(g.gs) && CRED.test(g.rc) ? g : null; }
+  function clearLocal() { [K_META, K_OUT, K_GRANT, U.STORE_KEY].forEach(lsDel); ssDel(K_GRANT); }
+  function forget() { ssDel(K_CRED); ST.k = null; }
+
+  /* ------------------------------------------------------------------ eligibility gate (as accepted for Firestorm CV-1R) */
+  /** Only the Google Chrome app on an Android phone: the browser string AND the browser's own client hints must both say so. */
+  function androidChrome() {
+    const ua = navigator.userAgent || '', d = (navigator       ).userAgentData || null;
+    const brands = d && d.brands ? d.brands.map((b) => String(b.brand)) : [];
+    const uaOk = /Android/.test(ua) && /Mobile/.test(ua) && /Chrome\/\d+/.test(ua) &&
+      !/SamsungBrowser|EdgA|Edg\/|OPR\/|OPT\/|Opera|Firefox|FxiOS|CriOS|YaBrowser|UCBrowser|MiuiBrowser|HeyTap|Vivaldi|DuckDuckGo|; wv\)|Version\/\d/.test(ua);
+    const hintsOk = !!d && d.mobile === true && d.platform === 'Android' && brands.indexOf('Google Chrome') >= 0;
+    return uaOk && hintsOk;
+  }
+
+  /* ------------------------------------------------------------------ screens shown before or instead of the study */
+  function refuseBrowser(link) {
+    const kids        = [h('h1', null, 'Please open this study in Google Chrome'),
+      h('p', null, 'This study works only in the Google Chrome app on an Android phone. Nothing has been recorded, and your study link has not been used.')];
+    if (link) {
+      const status = h('p', { class: 'small', id: 'copyStatus' });
+      kids.push(h('button', { class: 'primary', id: 'copyLink', style: 'width:100%', onclick: () => copyLink(link, status) }, 'Copy my study link'), status,
+        h('p', null, 'Then open the Google Chrome app, paste the link into the address bar and open it.'));
+    }
+    kids.push(h('p', null, 'Or go back to Prolific and open your study link again in the Google Chrome app. Chrome’s “Desktop site” option must be off.'),
+      h('p', null, 'If you cannot use Google Chrome on an Android phone, please return the study on Prolific.'));
+    sheet(...kids);
+  }
+  function copyLink(link, status) {
+    const fallback = () => {
+      status.textContent = 'Copy your link from this box:';
+      const box = (h('input', { type: 'text', readonly: 'readonly', value: link, style: 'width:100%;font-size:14px', 'aria-label': 'Your study link' })                    );
+      status.after(box); box.focus(); box.select();
+    };
+    try { navigator.clipboard.writeText(link).then(() => { status.textContent = 'Copied.'; }, fallback); } catch (e) { fallback(); }
+  }
+  function cannotRun() { sheet(h('h1', null, 'This browser cannot run the study'), h('p', null, 'Please go back to Prolific and open your study link again in the Google Chrome app.')); }
+  function reopen() { sheet(h('h1', null, 'Please reopen your study link'), h('p', null, 'This link does not match the study that is in progress in this browser. Please go back to Prolific and open your original study link.')); }
+  function otherTab() { sheet(h('h1', null, 'This study is open in another tab'), h('p', null, 'Please continue in the other tab. If you have closed it, wait a few seconds and reload this page.')); }
+  function starting() { sheet(h('h1', null, 'Starting…'), h('p', null, 'Connecting to the study. This takes a few seconds.')); }
+  function stopped(code) {
+    if (code === 'session_conflict') { sheet(h('h1', null, 'This study link is already in use'), h('p', null, 'It was started in another browser or on another device. Please continue there. If that was not you, please message the researcher through Prolific.')); return; }
+    if (code === 'unknown_credential' || code === 'bad_credential' || code === 'no_credential') { sheet(h('h1', null, 'This link is not valid.'), h('p', null, 'Please go back to the study page and use the link you were given.')); return; }
+    sheet(h('h1', null, 'Something went wrong'), h('p', null, 'The study could not be started (' + code + '). Nothing more will be sent. Please message the researcher through Prolific; genuine participation is paid.'));
+  }
+  let startTries = 0;
+  function couldNotStart(next, version) {
+    startTries++;
+    const kids        = [h('h1', null, 'Could not start yet'), h('p', null, 'Please check your connection and try again.'),
+      h('button', { class: 'primary', id: 'startAgain', style: 'width:100%', onclick: () => agree(next, version) }, 'Try again')];
+    if (startTries >= 2) kids.push(h('p', { class: 'small' }, 'If this keeps happening, please return the study on Prolific or message the researcher through Prolific.'));
+    sheet(...kids);
+  }
+
+  /* ------------------------------------------------------------------ one tab at a time in this browser */
+  // Progress is kept in this origin's local storage, which every tab of the browser shares: only the tab that holds the
+  // lock and runs the study writes it (a refused, waiting or invalid tab never does), only once the session has begun at
+  // "I agree" (nothing before consent), and a tab that finds the lock taken by another tab (after its own timers were
+  // paused in the background) stops and says so.
+  const baseStoreSet = U.STORE.set;
+  U.STORE.set = function (v) { if (ST.owner && ST.started) return baseStoreSet(v); };
+  const heldByOther = () => { const l = lsGet(K_LOCK); return !!(l && l.id !== ST.tab && Date.now() - l.t < 4000); };
+  function unlock() { if (ST.lockT) { clearInterval(ST.lockT); ST.lockT = null; } const m = lsGet(K_LOCK); if (m && m.id === ST.tab) lsDel(K_LOCK); }
+  function lostLock() {
+    unlock(); ST.owner = false; ST.active = false; U.FROZEN = true;
+    try { if (U.teardownScene) U.teardownScene(); } catch (e) { /* ignore */ }
+    otherTab();
+  }
+  function lock() {
+    ST.tab = ssGet(K_TAB) || hex(8); ssSet(K_TAB, ST.tab);
+    if (heldByOther()) return false;
+    const beat = () => { if (heldByOther()) { lostLock(); return; } lsSet(K_LOCK, { id: ST.tab, t: Date.now() }); };
+    lsSet(K_LOCK, { id: ST.tab, t: Date.now() }); ST.lockT = setInterval(beat, 1000);
+    addEventListener('pagehide', unlock);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && ST.lockT) beat(); });
+    return true;
+  }
+  /** A tab that does not run the study (refused, waiting, invalid) keeps nothing: the record is frozen in memory. */
+  function idle(r) { ST.owner = false; U.FROZEN = true; return r; }
+
+  /* ------------------------------------------------------------------ admission (boot asks this first) */
+  function admit() {
+    const m = /^#k=([A-Za-z0-9_-]{43})$/.exec(ORIG.hash || '');
+    if (!androidChrome()) { ssDel(K_CRED); refuseBrowser(m ? ORIG.href : null); return idle('refused'); }
+    if (!capable()) { cannotRun(); return idle('refused'); }
+    let k = m ? m[1] : null;
+    if (k) ssSet(K_CRED, k); else k = ssGet(K_CRED);
+    const slot = U.QS.get('slot');
+    if (!k || !CRED.test(k) || slot === null) return idle('nocred');
+    ST.k = k; ST.vfp = sha('fl2bh-credential-v1:' + k).slice(0, 16);
+    const declined = lsGet(K_DECL);
+    if (declined && declined.vfp === ST.vfp) { forget(); return idle('declined'); }   // this invitation was declined in this browser
+    if (!lock()) { otherTab(); return idle('refused'); }
+    const meta = lsGet(K_META);
+    if (meta && meta.vfp !== ST.vfp) clearLocal();       // another invitation's leftovers in this browser (no other tab runs it: this tab holds the lock)
+    else {
+      const prog = U.storedSession();
+      if (prog && prog.slot && prog.slot !== slot && meta) { unlock(); reopen(); return idle('refused'); }
+    }
+    ST.owner = true;
+    // a session that began at "I agree" in this browser resumes; anything else stored for the study is not a session: dropped
+    const prog = U.storedSession();
+    const c = prog && prog.rec ? prog.rec.consent : null;
+    if (c && typeof c === 'object' && !c.declined && prog.slot === slot && prog.rec.slot === slot) ST.started = true;
+    else if (prog) lsDel(U.STORE_KEY);
+    ST.meta = lsGet(K_META) || { vfp: ST.vfp, sid: null, seq: 0, okSeq: 0, code: null, test: null, final: false };
+    if (ST.meta.okSeq > 0 && grant()) { ST.active = !ST.meta.final; ST.lastBody = null; }
+    if (ST.active) setTimeout(flush, 0);
+    return 'ok';
+  }
+
+  /* ------------------------------------------------------------------ upload, receipt, readback */
+  function auth() { const g = grant(); return ST.k && g ? { k: ST.k, gs: g.gs, rv: sha('fl2bh-readback-v1:' + g.rc) } : null; }
+  function envelope(e, a) {
+    return JSON.stringify({ q: 'FL2BH', v: 1, sid: e.sid, seq: e.seq, final: e.final, digest: e.digest, body: e.body, auth: a })
+      .replace(/[\u007f-￿]/g, (c) => '\\u' + ('000' + c.charCodeAt(0).toString(16)).slice(-4));
+  }
+  /** The current record as the next record of the stream (always seq 1 until the first record is verified). */
+  function enqueue(final) {
+    const body = JSON.stringify(REC);
+    const seq = ST.meta.okSeq === 0 ? 1 : Math.max(ST.meta.seq, ST.meta.okSeq) + 1;
+    ST.meta.seq = seq; ST.meta.sid = REC.session; saveMeta();
+    const e = { sid: REC.session, seq, final: !!final, body, digest: sha(body) };
+    lsSet(K_OUT, e); ST.lastBody = body;
+    flush();
+    return e;
+  }
+  async function timed(url, init, ms) {
+    const ac = typeof AbortController === 'function' ? new AbortController() : null;
+    const t = ac ? setTimeout(() => ac.abort(), ms) : null;
+    try { const r = await fetch(url, Object.assign({}, init, ac ? { signal: ac.signal } : {})); return await r.json(); }
+    catch (e) { return null; } finally { if (t) clearTimeout(t); }
+  }
+  function readback(sid) {
+    const g = grant(); if (!g) return Promise.resolve(null);
+    const u = CFG.receiver + (CFG.receiver.indexOf('?') < 0 ? '?' : '&') + 'op=receipt&rs=' + sid + '&gs=' + g.gs + '&rc=' + g.rc;
+    return timed(u, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' }, 12000);
+  }
+  const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+  async function deliver(e) {
+    const a = auth(); if (!a) return { ok: false, why: 'no_auth' };
+    const env = envelope(e, a);
+    const resp = await timed(CFG.receiver, { method: 'POST', mode: 'cors', cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: env, keepalive: env.length < 60000 }, 30000);
+    if (resp && resp.ok === false && HARD.indexOf(resp.error) >= 0) return { ok: false, why: resp.error, hard: true };
+    for (let i = 0; i < 3; i++) {
+      const r = await readback(e.sid);
+      if (r && r.ok === true && r.sid === e.sid) {
+        if (r.seq === e.seq && r.digest === e.digest && r.final === e.final) return { ok: true, r };
+        if (r.final && !(e.final && r.seq === e.seq)) return { ok: false, why: 'closed', hard: true };
+        if (r.seq >= e.seq) return { bump: r.seq + 1 };
+        return { ok: false, why: 'not_stored' };
+      }
+      if (r && r.ok === false && (r.error === 'unauthorized' || r.error === 'not_found')) return { ok: false, why: resp && resp.ok === false ? resp.error : r.error };
+      await pause(800);
+    }
+    return { ok: false, why: 'no_readback' };
+  }
+  /** Delivers the outbox (one entry: the newest record), one delivery at a time; a caller awaits the run in progress. */
+  let inflight = null;
+  function flush() {
+    if (inflight) { ST.again = true; return inflight; }
+    if (!CFG.receiver || !ST.meta || !auth()) return Promise.resolve(null);
+    inflight = run().finally(() => { inflight = null; });
+    return inflight;
+  }
+  async function run() {
+    ST.flushing = true;
+    let res = null;
+    try {
+      do {
+        ST.again = false;
+        let e = lsGet(K_OUT);
+        if (!e || e.seq <= ST.meta.okSeq) { lsDel(K_OUT); break; }
+        res = await deliver(e);
+        if (res.bump) {                              // the receiver holds this sequence number already: resend the newest record above it
+          const body = JSON.stringify(REC);
+          e = { sid: e.sid, seq: res.bump, final: e.final, body, digest: sha(body) };
+          ST.meta.seq = res.bump; saveMeta(); lsSet(K_OUT, e); ST.lastBody = body; ST.again = true; continue;
+        }
+        if (res.ok) {
+          ST.meta.okSeq = e.seq;
+          if (res.r.code) { ST.meta.code = res.r.code; ST.meta.test = !!res.r.test; ST.meta.noCode = false; }
+          else if (res.r.completed && res.r.noCode && !ST.meta.code) ST.meta.noCode = true;
+          if (e.final) ST.meta.final = true;
+          saveMeta();
+          const cur = lsGet(K_OUT); if (cur && cur.seq <= e.seq) lsDel(K_OUT);
+          ST.failing = false; ST.retryMs = 2000;
+          if (e.final) finished();
+        } else break;
+      } while (ST.again);
+    } finally { ST.flushing = false; }
+    if (res && !res.ok && !res.bump) {
+      ST.failing = true;
+      if (!res.hard && !ST.retryT) { ST.retryT = setTimeout(() => { ST.retryT = null; flush(); }, ST.retryMs); ST.retryMs = Math.min(30000, ST.retryMs * 2); }
+    }
+    paint();
+    return res;
+  }
+  /** After the verified final: the session's capability and the record's local copy are no longer needed in this browser.
+   *  The invitation stays in this tab's session storage only, so a reload of the tab shows "All done" and the code again. */
+  function finished() {
+    ST.active = false;
+    try {
+      const done = { rec: { slot: REC.slot, order: REC.order, sym: REC.sym, pairSide: REC.pairSide, optList: REC.optList, session: REC.session,
+        consent: REC.consent, completed: REC.completed, finishedAt: REC.finishedAt, mode: REC.mode }, stepIdx: U.stepIdx, slot: REC.slot };
+      localStorage.setItem(U.STORE_KEY, JSON.stringify(done));
+    } catch (e) { /* ignore */ }
+    lsDel(K_GRANT); ssDel(K_GRANT);
+  }
+
+  /* ------------------------------------------------------------------ hook points called by the flow */
+  /** "I agree": the gate again, then the session begins (record, assignment, clock, consent), this browser's session and
+   *  the first record; the touch check begins only after its verified receipt. */
+  async function agree(next, version) {
+    if (!androidChrome()) { forget(); refuseBrowser(null); return; }
+    if (!ST.k) { stopped('no_credential'); return; }
+    if (!ST.started) {                                            // the session begins here, not at arrival
+      if (!ST.begin) { stopped('no_session'); return; }
+      ST.begin();                                                 // start: new record, assignment, clock, the consent step
+      try { Object.assign(REC.device, U.deviceInfo()); } catch (e) { /* keep the facts already there */ }
+      REC.consent = { version, at: U.now() }; U.ev('consent', version);
+      ST.started = true;
+      U.save();                                                   // kept in this browser from now on (resume)
+    }
+    if (!grant()) { const g = { gs: hex(16), rc: b64url(32), vfp: ST.vfp }; lsSet(K_GRANT, g); ssSet(K_GRANT, JSON.stringify(g)); }
+    starting();
+    enqueue(false);
+    let res = null;
+    for (let i = 0; i < 3; i++) {                                 // the first verified receipt, or a definite refusal
+      res = await flush();
+      if (ST.meta.okSeq > 0 || (res && res.hard)) break;
+      await pause(1500);
+    }
+    if (ST.meta.okSeq > 0) { ST.active = true; ST.lastStep = U.stepIdx; ST.lastN = REC.scenes.length + REC.probes.length; next(); return; }
+    if (res && res.hard) { stopped(res.why); return; }
+    couldNotStart(next, version);
+  }
+  /** C2's save() runs as before; after it, the record is queued when the step or the number of finished scenes changed. */
+  const baseSave = U.save;
+  U.save = function () {
+    const r = baseSave.apply(this, arguments);
+    try {
+      if (ST.active && !U.FROZEN) {
+        const st = U.stepIdx, n = REC.scenes.length + REC.probes.length;
+        const nowComplete = REC.completed && ST.completeAt === null;    // the completed record goes up at once (the code follows its receipt)
+        if (nowComplete) ST.completeAt = Date.now();
+        if (nowComplete || st !== ST.lastStep || n !== ST.lastN) { ST.lastStep = st; ST.lastN = n; enqueue(false); }
+      }
+    } catch (e) { /* never let the upload break the page */ }
+    return r;
+  };
+  /** Finish freezes the record (C2), then the final record is sent. A decline sends nothing and keeps no record: only a
+   *  guard with the invitation's fingerprint stays, so the same link shows the declined screen again in this browser. */
+  const baseFreeze = U.freezeRecord;
+  U.freezeRecord = function () {
+    const r = baseFreeze.apply(this, arguments);
+    try {
+      if (ST.active && REC.finishedAt != null) { ST.finalAt = Date.now(); enqueue(true); }
+      else if (!ST.active && REC.consent && REC.consent.declined) {
+        if (ST.vfp) lsSet(K_DECL, { vfp: ST.vfp });
+        clearLocal(); unlock(); forget(); ST.owner = false;
+      }
+    } catch (e) { /* ignore */ }
+    return r;
+  };
+  // after the completion code is shown, and during the optional scene: the record goes up at least every 5 seconds when it changed
+  ST.timer = setInterval(() => {
+    try {
+      if (!ST.active || U.FROZEN || !REC.completed) return;
+      if (JSON.stringify(REC) !== ST.lastBody) enqueue(false);
+      paint();
+    } catch (e) { /* ignore */ }
+  }, 5000);
+  function beacon() {
+    try {
+      if (!ST.active || ST.meta.final) return;
+      let e = lsGet(K_OUT);
+      if (!e && JSON.stringify(REC) !== ST.lastBody) e = enqueue(!!U.FROZEN && REC.finishedAt != null);
+      const a = auth();
+      if (!e || !a) return;
+      const env = envelope(e, a);
+      if (env.length < 60000 && navigator.sendBeacon) navigator.sendBeacon(CFG.receiver, new Blob([env], { type: 'text/plain;charset=utf-8' }));
+    } catch (e) { /* ignore */ }
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') beacon(); else flush(); });
+  addEventListener('pagehide', beacon);
+  addEventListener('online', () => { flush(); });
+
+  /** The completion card's code and line (where the review page shows TEST-ONLY), kept up to date. */
+  function codeParts() {
+    const b = h('b', { id: 'ccode' }), s = h('div', { class: 'small', id: 'ccodeNote' });
+    ST.codeEls.push([b, s]); paintCode(b, s);
+    return [b, s];
+  }
+  function paintCode(b, s) {
+    if (ST.meta && ST.meta.code) { b.textContent = ST.meta.code; s.textContent = 'Copy this code into Prolific.'; return; }
+    if (ST.meta && ST.meta.noCode) { b.textContent = 'not available'; s.textContent = 'Your answers are saved, but the code could not be shown. Please message the researcher through Prolific; genuine participation is paid.'; return; }
+    b.textContent = '········';
+    const waited = ST.completeAt ? Date.now() - ST.completeAt : 0;
+    s.textContent = waited > 90000 ? 'Your answers are not saved yet; the page keeps trying. If this does not finish, return to Prolific and message the researcher through Prolific; genuine participation is paid.'
+      : waited > 20000 || ST.failing ? 'Still saving your answers… please keep this page open.' : 'Saving your answers…';
+  }
+  /** After "All done": the code again and whether the final record is saved. */
+  function doneParts() {
+    const c = h('div', { class: 'card', id: 'doneCode' });
+    ST.doneEls.push(c); paintDone(c);
+    return [c];
+  }
+  function paintDone(c) {
+    c.innerHTML = '';
+    if (ST.meta && ST.meta.code) c.append('Completion code: ', h('b', null, ST.meta.code));
+    else if (ST.meta && ST.meta.noCode) c.append(h('div', null, 'The completion code could not be shown. Please message the researcher through Prolific; genuine participation is paid.'));
+    const waited = ST.finalAt ? Date.now() - ST.finalAt : 0;
+    const line = ST.meta && ST.meta.final ? 'Your answers are saved.' : waited > 90000 ? 'Your last answers are not saved yet; the page keeps trying while it is open.' : 'Saving your last answers…';
+    c.append(h('div', { class: 'small' }, line));
+  }
+  function paint() {
+    ST.codeEls = ST.codeEls.filter(([b]) => b.isConnected); ST.codeEls.forEach(([b, s]) => paintCode(b, s));
+    ST.doneEls = ST.doneEls.filter((c) => c.isConnected); ST.doneEls.forEach(paintDone);
+  }
+
+  /** The start of this slot's session, kept until "I agree" (ui_flow start). */
+  function pending(begin) { ST.begin = begin; }
+
+  U.HOSTED = { admit, pending, agree, codeParts, doneParts, androidChrome };
+})();
+</script>
+<script>/*
+ * FL-2B renderer: draws the board (snow, rock, brush, barns, homes, fire), the placed fuel, the burn, Preview, the
+ * miss marks and the tray on the canvas. It reads the scene and never changes the board or the record; it only notes
+ * what it drew (run.drawn), which the parity test reads.
+ * One of the page modules (load order: ui_common, ui_record, [ui_hosted], ui_render, ui_preview, ui_input, ui_scene,
+ * ui_testhooks, ui_flow). Modules share nothing but window.FL2B_UI.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL2B_UI;
+  const { FLE, REDUCED, STEP_MS } = U;
+  const currentFuel = (...a       ) => U.currentFuel(...a);
+  const dragSnap = (...a       ) => U.dragSnap(...a);
+  const dragTopLeft = (...a       ) => U.dragTopLeft(...a);
+  const oriOf = (...a       ) => U.oriOf(...a);
+  const trayPieceRect = (...a       ) => U.trayPieceRect(...a);
+  /* ------------------------------------------------------------------ drawing */
+  const COL = { snow: '#f7f9fb', grid: '#e1e7ec', rock: '#8b939a', fuel: '#b08968', fuelEdge: '#8a6a4f', burnt: '#4b3a2f', ember: '#6b2a14', emberGlow: 'rgba(255,120,40,.35)',
+    home: '#5c6b78', homeWarm: '#9a6b2f', window: '#3a4550', windowWarm: '#ffd43b', fire: '#f06a1d', flame: '#ffd43b', ok: '#2f9e44', bad: '#e03131', cold: '#4a90d9', refuse: '#7048e8',
+    brush: '#d9c27a', brushEdge: '#a8903f', brushTwig: '#8a7430', barn: '#9b3b2e', barnRoof: '#5a1f16', barnDoor: '#3b1410', barnSafe: '#2f9e44' };
+  function rr(ctx, x, y, w, hh, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + hh, r); ctx.arcTo(x + w, y + hh, x, y + hh, r); ctx.arcTo(x, y + hh, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  function draw(run) {
+    if (run.dead || !run.g) return;
+    const ctx = run.el.ctx, g = run.g, C = g.C, sc = run.sc;
+    ctx.clearRect(0, 0, g.cw, g.ch);
+    const fuel = currentFuel(run);
+    const pv = run.preview ? FLE.burn(sc, fuel) : null;
+    const a = run.anim; let step = -1;
+    if (a) step = a.done ? 1e9 : Math.floor((performance.now() - a.start) / STEP_MS);
+    const b = a ? a.b : null;
+    const tnow = performance.now() / 1000;
+    // what this frame shows, as the renderer drew it (read by the parity test)
+    const drawn      = { kind: pv ? 'preview' : b && a.done ? 'result' : 'board', burn: [], noburn: [], warm: [], cold: [], caught: [], safeBarns: [], markers: [] };
+    const burnsAt = (i) => FLE.burns(sc, fuel, i);
+    const isLit = (i) => b && b.t[i] >= 0 && b.t[i] <= step;
+    // board
+    rr(ctx, g.bx - 2, g.by - 2, g.bw + 4, g.bh + 4, 8); ctx.fillStyle = '#d5dde3'; ctx.fill();
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 7; x++) {
+      const i = y * 7 + x, px = g.bx + x * C, py = g.by + y * C, t = sc.cells[i];
+      ctx.fillStyle = COL.snow; ctx.fillRect(px, py, C, C);
+      ctx.strokeStyle = COL.grid; ctx.lineWidth = 1; ctx.strokeRect(px + 0.5, py + 0.5, C - 1, C - 1);
+      if (t === FLE.ROCK) { rr(ctx, px + 3, py + 3, C - 6, C - 6, C * 0.18); ctx.fillStyle = COL.rock; ctx.fill(); }
+    }
+    // joints between side-touching fuel squares (placed or brush), and fuel touching the fire, a home or a barn: connections are visible
+    const jw = C * 0.36;
+    for (let i = 0; i < 56; i++) {
+      if (!burnsAt(i)) continue;
+      const x = i % 7, y = (i - x) / 7, cx = g.bx + x * C + C / 2, cy = g.by + y * C + C / 2;
+      for (const nb of FLE.neighbors(sc, i)) {
+        const nx = nb % 7, ny = (nb - nx) / 7;
+        const other = burnsAt(nb) ? 'fuel' : sc.cells[nb] === FLE.SOURCE ? 'src' : sc.cells[nb] === FLE.HOME ? 'home' : sc.cells[nb] === FLE.PROTECT ? 'barn' : null;
+        if (!other || (other === 'fuel' && nb < i)) continue;
+        const ncx = g.bx + nx * C + C / 2, ncy = g.by + ny * C + C / 2;
+        const lit = isLit(i) && (other !== 'fuel' || isLit(nb));
+        ctx.fillStyle = lit ? (a.done ? COL.ember : '#f08c3a') : sc.cells[i] === FLE.BRUSH && (other !== 'fuel' || sc.cells[nb] === FLE.BRUSH) ? COL.brushEdge : COL.fuel;
+        const reach = other === 'fuel' ? 1 : 0.62;
+        const ex = cx + (ncx - cx) * reach, ey = cy + (ncy - cy) * reach;
+        if (nx !== x) ctx.fillRect(Math.min(cx, ex), cy - jw / 2, Math.abs(ex - cx), jw);
+        else ctx.fillRect(cx - jw / 2, Math.min(cy, ey), jw, Math.abs(ey - cy));
+      }
+    }
+    // fuel squares: placed pieces and brush
+    const fuelColor = (i, brush) => {
+      if (isLit(i)) {
+        const age = step - b.t[i];
+        if (age < 3 && !a.done && !REDUCED) { const f = 0.5 + 0.5 * Math.sin(tnow * 18 + i); return `rgb(${240 + 15 * f | 0},${110 + 70 * f | 0},${30})`; }
+        return a.done ? COL.ember : COL.burnt;
+      }
+      return brush ? COL.brush : COL.fuel;
+    };
+    for (let i = 0; i < 56; i++) {
+      if (!burnsAt(i)) continue;
+      const brush = sc.cells[i] === FLE.BRUSH;
+      const x = i % 7, y = (i - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+      rr(ctx, px + C * 0.14, py + C * 0.14, C * 0.72, C * 0.72, C * 0.14);
+      ctx.fillStyle = fuelColor(i, brush); ctx.fill();
+      if (!isLit(i)) { ctx.strokeStyle = brush ? COL.brushEdge : COL.fuelEdge; ctx.lineWidth = 1.5; ctx.stroke(); }
+      else if (a.done) { ctx.strokeStyle = COL.emberGlow; ctx.lineWidth = 3; ctx.stroke(); }
+      if (brush && !isLit(i)) drawTwigs(ctx, px, py, C);
+      if (drawn.kind === 'result') (b.t[i] >= 0 ? drawn.burn : drawn.noburn).push(i);
+    }
+    // piece outlines so each piece reads as one object
+    if (run.cond === 'A') {
+      for (const pc of run.pieces) if (pc.placed && !(run.drag && run.drag.id === pc.id && run.drag.active)) outlinePiece(ctx, g, FLE.placementCells(pc.type, pc.o, pc.x, pc.y), 'rgba(60,40,25,.55)');
+    }
+    // fire square
+    {
+      const x = sc.source % 7, y = (sc.source - x) / 7, cx = g.bx + x * C + C / 2, cy = g.by + y * C + C / 2;
+      ctx.beginPath(); ctx.arc(cx, cy, C * 0.38, 0, Math.PI * 2); ctx.fillStyle = COL.fire; ctx.fill();
+      const f = REDUCED ? 1 : 0.85 + 0.15 * Math.sin(tnow * 6); // reduced motion: a still flame
+      ctx.beginPath(); ctx.moveTo(cx, cy - C * 0.26 * f); ctx.quadraticCurveTo(cx + C * 0.2, cy + C * 0.02, cx, cy + C * 0.2); ctx.quadraticCurveTo(cx - C * 0.2, cy + C * 0.02, cx, cy - C * 0.26 * f);
+      ctx.fillStyle = COL.flame; ctx.fill();
+    }
+    // homes
+    sc.homes.forEach((hm, k) => {
+      const x = hm % 7, y = (hm - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+      const warm = b && b.homeT[k] >= 0 && b.homeT[k] <= step;
+      if (warm) { const r = C * (0.62 + (a.done || REDUCED ? 0 : 0.06 * Math.sin(tnow * 8))); ctx.beginPath(); ctx.arc(px + C / 2, py + C / 2, r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,207,63,.35)'; ctx.fill(); }
+      drawHome(ctx, px, py, C, warm);
+      if (b && a.done && b.homeT[k] < 0) drawSnowflake(ctx, px + C * 0.82, py + C * 0.2, C * 0.16);
+      if (drawn.kind === 'result') (warm ? drawn.warm : drawn.cold).push(k);
+    });
+    // barns
+    sc.barns.forEach((bn, k) => {
+      const x = bn % 7, y = (bn - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+      const caught = b && b.barnT[k] >= 0 && b.barnT[k] <= step;
+      drawBarn(ctx, px, py, C, caught, caught && !a.done && !REDUCED ? tnow : null);
+      if (drawn.kind === 'result') (caught ? drawn.caught : drawn.safeBarns).push(k);
+    });
+    // preview overlay: everything that would burn (placed and brush), the homes, and a barn that would catch
+    if (pv) {
+      for (let i = 0; i < 56; i++) {
+        if (!burnsAt(i)) continue;
+        const x = i % 7, y = (i - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+        if (pv.t[i] >= 0) { ctx.strokeStyle = '#ff922b'; ctx.lineWidth = 4; rr(ctx, px + C * 0.1, py + C * 0.1, C * 0.8, C * 0.8, C * 0.16); ctx.stroke(); ctx.fillStyle = 'rgba(255,146,43,.25)'; ctx.fill(); drawn.burn.push(i); }
+        else { ctx.setLineDash([4, 3]); ctx.strokeStyle = '#6b7780'; ctx.lineWidth = 2.5; rr(ctx, px + C * 0.1, py + C * 0.1, C * 0.8, C * 0.8, C * 0.16); ctx.stroke(); ctx.setLineDash([]); drawn.noburn.push(i); }
+      }
+      sc.homes.forEach((hm, k) => {
+        const x = hm % 7, y = (hm - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+        ctx.lineWidth = 4;
+        if (pv.homeT[k] >= 0) { ctx.strokeStyle = '#ffb000'; ctx.beginPath(); ctx.arc(px + C / 2, py + C / 2, C * 0.52, 0, Math.PI * 2); ctx.stroke(); drawSun(ctx, px + C * 0.82, py + C * 0.18, C * 0.14); drawn.warm.push(k); }
+        else { ctx.strokeStyle = COL.cold; ctx.beginPath(); ctx.arc(px + C / 2, py + C / 2, C * 0.52, 0, Math.PI * 2); ctx.stroke(); drawSnowflake(ctx, px + C * 0.82, py + C * 0.18, C * 0.15); drawn.cold.push(k); }
+      });
+      sc.barns.forEach((bn, k) => {
+        const x = bn % 7, y = (bn - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+        ctx.lineWidth = 4;
+        if (pv.barnT[k] >= 0) { ctx.strokeStyle = COL.bad; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.arc(px + C / 2, py + C / 2, C * 0.52, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); drawFlameMark(ctx, px + C * 0.82, py + C * 0.2, C * 0.16); drawn.caught.push(k); }
+        else { ctx.strokeStyle = COL.barnSafe; ctx.beginPath(); ctx.arc(px + C / 2, py + C / 2, C * 0.52, 0, Math.PI * 2); ctx.stroke(); drawn.safeBarns.push(k); }
+      });
+    }
+    run.drawn = drawn;
+    // Miss marks after a failed strike (where the fire stopped on the way to each cold home, then the first missing square);
+    // while Preview is held, before ignition: where the fire stops only, never the empty square that would repair the route.
+    // Never in probes (no Preview there). A caught barn is shown on the barn itself, not by a marker.
+    if (pv && !pv.success && pv.cold.length) { const pm = FLE.missMarkers(sc, fuel, pv).map((m) => ({ home: m.home, endpoint: m.endpoint, gap: -1 })); drawMarkers(ctx, g, pm); drawn.markers = pm.map((m) => [m.home, m.endpoint, m.gap]); }
+    if (b && a.done && run.markers) { drawMarkers(ctx, g, run.markers); if (!pv) drawn.markers = run.markers.map((m) => [m.home, m.endpoint, m.gap]); }
+    // prediction toggles (probes)
+    if (run.phase === 'probePredict') {
+      sc.homes.forEach((hm, k) => {
+        const x = hm % 7, y = (hm - x) / 7, cx = g.bx + x * C + C / 2, cy = g.by + y * C + C / 2;
+        const on = run.predicted.has(k);
+        ctx.lineWidth = 3; ctx.strokeStyle = on ? COL.ok : '#2f6fde'; ctx.setLineDash(on ? [] : [5, 4]);
+        ctx.beginPath(); ctx.arc(cx, cy, C * 0.54, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+        if (on) { ctx.beginPath(); ctx.arc(cx + C * 0.36, cy - C * 0.36, C * 0.17, 0, Math.PI * 2); ctx.fillStyle = COL.ok; ctx.fill();
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx + C * 0.28, cy - C * 0.36); ctx.lineTo(cx + C * 0.35, cy - C * 0.29); ctx.lineTo(cx + C * 0.45, cy - C * 0.44); ctx.stroke(); }
+      });
+    }
+    // tray / material area
+    drawTray(run, ctx);
+    // dragged piece and its landing spot
+    if (run.cond === 'A' && run.drag && run.drag.active) {
+      const pc = run.pieces[run.drag.id];
+      const s = dragSnap(run);
+      if (!s.toTray) {
+        for (const [x, y] of s.cells) {
+          if (x < 0 || y < 0 || x >= 7 || y >= 8) continue;
+          const px = g.bx + x * C, py = g.by + y * C;
+          ctx.fillStyle = s.legal ? 'rgba(47,158,68,.18)' : 'rgba(224,49,49,.16)'; ctx.fillRect(px + 1, py + 1, C - 2, C - 2);
+        }
+        outlinePiece(ctx, g, s.cells.filter(([x, y]) => x >= 0 && y >= 0 && x < 7 && y < 8), s.legal ? COL.ok : COL.bad);
+      }
+      const tl = dragTopLeft(run);
+      ctx.globalAlpha = 0.88;
+      for (const [dx, dy] of oriOf(pc)) { rr(ctx, tl.x + dx * C + C * 0.14, tl.y + dy * C + C * 0.14, C * 0.72, C * 0.72, C * 0.14); ctx.fillStyle = COL.fuel; ctx.fill(); ctx.strokeStyle = COL.fuelEdge; ctx.lineWidth = 1.5; ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    }
+  }
+  function drawMarkers(ctx, g, markers) {
+    const C = g.C;
+    for (const m of markers) {
+      if (m.endpoint >= 0) { const x = m.endpoint % 7, y = (m.endpoint - x) / 7; ctx.strokeStyle = COL.bad; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(g.bx + x * C + C / 2, g.by + y * C + C / 2, C * 0.44, 0, Math.PI * 2); ctx.stroke(); }
+      if (m.gap >= 0) {
+        const x = m.gap % 7, y = (m.gap - x) / 7, px = g.bx + x * C, py = g.by + y * C;
+        ctx.setLineDash([5, 4]); ctx.strokeStyle = COL.bad; ctx.lineWidth = 2.5; rr(ctx, px + C * 0.12, py + C * 0.12, C * 0.76, C * 0.76, C * 0.14); ctx.stroke(); ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(px + C * 0.36, py + C * 0.36); ctx.lineTo(px + C * 0.64, py + C * 0.64); ctx.moveTo(px + C * 0.64, py + C * 0.36); ctx.lineTo(px + C * 0.36, py + C * 0.64); ctx.stroke();
+      }
+    }
+  }
+  function outlinePiece(ctx, g, cells, color) {
+    const set = new Set(cells.map(([x, y]) => x + ',' + y));
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    for (const [x, y] of cells) {
+      const px = g.bx + x * g.C, py = g.by + y * g.C, C = g.C, m = 3;
+      if (!set.has(x + ',' + (y - 1))) { ctx.moveTo(px + m, py + m); ctx.lineTo(px + C - m, py + m); }
+      if (!set.has(x + 1 + ',' + y)) { ctx.moveTo(px + C - m, py + m); ctx.lineTo(px + C - m, py + C - m); }
+      if (!set.has(x + ',' + (y + 1))) { ctx.moveTo(px + m, py + C - m); ctx.lineTo(px + C - m, py + C - m); }
+      if (!set.has(x - 1 + ',' + y)) { ctx.moveTo(px + m, py + m); ctx.lineTo(px + m, py + C - m); }
+    }
+    ctx.stroke();
+  }
+  function drawHome(ctx, px, py, C, warm) {
+    const x0 = px + C * 0.16, x1 = px + C * 0.84, yr = py + C * 0.14, ye = py + C * 0.46, yb = py + C * 0.86;
+    ctx.beginPath(); ctx.moveTo(x0 - C * 0.04, ye); ctx.lineTo(px + C / 2, yr); ctx.lineTo(x1 + C * 0.04, ye); ctx.lineTo(x1, ye); ctx.lineTo(x1, yb); ctx.lineTo(x0, yb); ctx.lineTo(x0, ye); ctx.closePath();
+    ctx.fillStyle = warm ? COL.homeWarm : COL.home; ctx.fill();
+    ctx.fillStyle = warm ? COL.windowWarm : COL.window; ctx.fillRect(px + C * 0.4, py + C * 0.56, C * 0.2, C * 0.18);
+    // chimney
+    ctx.fillStyle = warm ? COL.homeWarm : COL.home; ctx.fillRect(px + C * 0.64, py + C * 0.2, C * 0.09, C * 0.16);
+  }
+  /** The barn: a wide red building with a dark roof and a door; when caught, flames over the roof and an ember body. */
+  function drawBarn(ctx, px, py, C, caught, flicker               ) {
+    const x0 = px + C * 0.1, x1 = px + C * 0.9, yr = py + C * 0.12, ye = py + C * 0.42, yb = py + C * 0.88;
+    ctx.beginPath(); ctx.moveTo(x0, yb); ctx.lineTo(x0, ye); ctx.lineTo(px + C / 2, yr); ctx.lineTo(x1, ye); ctx.lineTo(x1, yb); ctx.closePath();
+    ctx.fillStyle = caught ? COL.ember : COL.barn; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x0 - C * 0.04, ye + C * 0.02); ctx.lineTo(px + C / 2, yr - C * 0.04); ctx.lineTo(x1 + C * 0.04, ye + C * 0.02); ctx.lineWidth = C * 0.09; ctx.strokeStyle = caught ? COL.burnt : COL.barnRoof; ctx.stroke();
+    ctx.fillStyle = caught ? COL.burnt : COL.barnDoor; ctx.fillRect(px + C * 0.4, py + C * 0.58, C * 0.2, C * 0.3);
+    // cross-brace on the door
+    ctx.strokeStyle = caught ? COL.ember : COL.barn; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(px + C * 0.42, py + C * 0.6); ctx.lineTo(px + C * 0.58, py + C * 0.86); ctx.moveTo(px + C * 0.58, py + C * 0.6); ctx.lineTo(px + C * 0.42, py + C * 0.86); ctx.stroke();
+    if (caught) {
+      const f = flicker === null ? 1 : 0.85 + 0.15 * Math.sin(flicker * 14);
+      for (const dx of [0.3, 0.5, 0.7]) {
+        const cx = px + C * dx, cy = py + C * 0.3;
+        ctx.beginPath(); ctx.moveTo(cx, cy - C * 0.3 * f); ctx.quadraticCurveTo(cx + C * 0.12, cy, cx, cy + C * 0.08); ctx.quadraticCurveTo(cx - C * 0.12, cy, cx, cy - C * 0.3 * f);
+        ctx.fillStyle = COL.fire; ctx.fill();
+      }
+      ctx.strokeStyle = COL.bad; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(px + C / 2, py + C / 2, C * 0.5, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  /** Brush: a few dark twig strokes on the tan tile. */
+  function drawTwigs(ctx, px, py, C) {
+    ctx.strokeStyle = COL.brushTwig; ctx.lineWidth = Math.max(1.2, C * 0.045); ctx.lineCap = 'round'; ctx.beginPath();
+    ctx.moveTo(px + C * 0.3, py + C * 0.7); ctx.lineTo(px + C * 0.42, py + C * 0.34);
+    ctx.moveTo(px + C * 0.5, py + C * 0.72); ctx.lineTo(px + C * 0.56, py + C * 0.3);
+    ctx.moveTo(px + C * 0.7, py + C * 0.7); ctx.lineTo(px + C * 0.62, py + C * 0.4);
+    ctx.moveTo(px + C * 0.36, py + C * 0.5); ctx.lineTo(px + C * 0.3, py + C * 0.4);
+    ctx.stroke(); ctx.lineCap = 'butt';
+  }
+  function drawSnowflake(ctx, cx, cy, r) {
+    ctx.strokeStyle = COL.cold; ctx.lineWidth = 2; ctx.beginPath();
+    for (let k = 0; k < 3; k++) { const an = k * Math.PI / 3; ctx.moveTo(cx - r * Math.cos(an), cy - r * Math.sin(an)); ctx.lineTo(cx + r * Math.cos(an), cy + r * Math.sin(an)); }
+    ctx.stroke();
+  }
+  function drawSun(ctx, cx, cy, r) { ctx.fillStyle = '#ffb000'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); }
+  function drawFlameMark(ctx, cx, cy, r) {
+    ctx.beginPath(); ctx.moveTo(cx, cy - r * 1.3); ctx.quadraticCurveTo(cx + r * 0.9, cy, cx, cy + r * 0.8); ctx.quadraticCurveTo(cx - r * 0.9, cy, cx, cy - r * 1.3);
+    ctx.fillStyle = COL.bad; ctx.fill();
+  }
+  function drawTray(run, ctx) {
+    const g = run.g;
+    if (run.cond !== 'A') return;
+    for (const pc of run.pieces) {
+      const s = run.slots[pc.id];
+      rr(ctx, s.x - 6, g.trayY, s.w + 12, g.trayH, 10); ctx.fillStyle = pc.placed ? 'rgba(255,255,255,.35)' : '#ffffff'; ctx.fill();
+      if (pc.placed || (run.drag && run.drag.active && run.drag.id === pc.id)) continue;
+      const r = trayPieceRect(run, pc);
+      for (const [dx, dy] of oriOf(pc)) { rr(ctx, r.ox + dx * r.ts + 1.5, r.oy + dy * r.ts + 1.5, r.ts - 3, r.ts - 3, r.ts * 0.18); ctx.fillStyle = COL.fuel; ctx.fill(); ctx.strokeStyle = COL.fuelEdge; ctx.lineWidth = 1.2; ctx.stroke(); }
+      // small turn arrow
+      ctx.strokeStyle = '#8a96a0'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(s.x + s.w + 1, g.trayY + 9, 5, Math.PI * 0.2, Math.PI * 1.6); ctx.stroke();
+    }
+  }
+
+  Object.assign(U, { draw, COL });
+})();
+</script>
+<script>/*
+ * Preview: holding Preview shows what the same burn() would do now; releasing it, or lifting a finger anywhere, ends it.
+ * One of the page modules (load order: ui_common, ui_record, [ui_hosted], ui_render, ui_preview, ui_input, ui_scene, ui_testhooks, ui_flow). Modules share
+ * nothing but window.FL2B_UI: functions from another module are called through it when they run, constants
+ * come from modules loaded earlier, and the shared state (RUN, FLOW, stepIdx, FROZEN, T0) lives on it.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL2B_UI;
+  const draw = (...a       ) => U.draw(...a);
+  const ev = (...a       ) => U.ev(...a);
+  const firstAction = (...a       ) => U.firstAction(...a);
+  const renderControls = (...a       ) => U.renderControls(...a);
+  /* ---------- preview (same burn() as the strike) */
+  function previewOn(run) {
+    if (run.phase !== 'edit' || run.preview) return;
+    run.preview = true; run.previewStart = performance.now(); run.rec.previewCount++;
+    ev('pvOn'); firstAction(run); draw(run);
+  }
+  function previewOff(run) {
+    if (!run.preview) return;
+    run.preview = false; const d = performance.now() - run.previewStart; run.rec.previewMs += Math.round(d);
+    ev('pvOff', Math.round(d)); draw(run);
+  }
+  // safety: a finger lifted anywhere ends a held Preview
+  document.addEventListener('pointerup', () => { if (U.RUN && U.RUN.preview) { previewOff(U.RUN); renderControls(U.RUN); } }, true);
+  document.addEventListener('pointercancel', () => { if (U.RUN && U.RUN.preview) { previewOff(U.RUN); renderControls(U.RUN); } }, true);
+
+  Object.assign(U, { previewOn, previewOff });
+})();
+</script>
+<script>/*
+ * FL-2B input: pointer and touch handling for the pieces and the probe predictions; board changes go only through
+ * the scene's act() (the board model). FL-1's drawing input is not in FL-2B.
+ * One of the page modules (load order: ui_common, ui_record, [ui_hosted], ui_render, ui_preview, ui_input, ui_scene,
+ * ui_testhooks, ui_flow). Modules share nothing but window.FL2B_UI.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL2B_UI;
+  const { FLE, TXT } = U;
+  const act = (...a       ) => U.act(...a);
+  const cellAt = (...a       ) => U.cellAt(...a);
+  const dims = (...a       ) => U.dims(...a);
+  const draw = (...a       ) => U.draw(...a);
+  const ev = (...a       ) => U.ev(...a);
+  const firstAction = (...a       ) => U.firstAction(...a);
+  const firstPlace = (...a       ) => U.firstPlace(...a);
+  const occupancy = (...a       ) => U.occupancy(...a);
+  const oriOf = (...a       ) => U.oriOf(...a);
+  const plog = (...a       ) => U.plog(...a);
+  const renderControls = (...a       ) => U.renderControls(...a);
+  const save = (...a       ) => U.save(...a);
+  const setHint = (...a       ) => U.setHint(...a);
+  const trayPieceRect = (...a       ) => U.trayPieceRect(...a);
+  /* ---------- input */
+  function attachInput(run) {
+    const cv = run.el.canvas;
+    const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    // one finger at a time: while a drag is under way, other fingers are ignored
+    const other = (e) => run.activePointer != null && e.pointerId !== run.activePointer;
+    cv.addEventListener('pointerdown', (e) => {
+      if (run.dead) return;
+      e.preventDefault();
+      if (other(e)) { ev('extraFinger'); plog(run, 'x', pos(e)); return; }
+      try { cv.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+      const p = pos(e);
+      if (!run.rec.pointerType) run.rec.pointerType = e.pointerType || null;
+      plog(run, 'd', p);
+      onDown(run, p, e);
+      if (run.drag) run.activePointer = e.pointerId;
+    });
+    cv.addEventListener('pointermove', (e) => { if (!run.dead && !other(e)) { if (run.activePointer != null) plog(run, 'm', pos(e)); onMove(run, pos(e)); } });
+    cv.addEventListener('pointerup', (e) => { if (run.dead || other(e)) return; plog(run, 'u', pos(e)); onUp(run, pos(e)); run.activePointer = null; });
+    // a cancelled touch counts as lost input only when it ended a drag that was under way
+    const lost = () => { if (run.drag) { const k = run.drag.active ? 'drag' : 'tap'; run.rec.inputLost = (run.rec.inputLost || 0) + 1; ev('inputLost', [k, run.def.id]); } };
+    cv.addEventListener('pointercancel', (e) => { if (run.dead || other(e)) return; plog(run, 'c', pos(e)); lost(); onCancel(run); run.activePointer = null; });
+    cv.addEventListener('lostpointercapture', (e) => { if (!run.dead && e.pointerId === run.activePointer) { lost(); onCancel(run); run.activePointer = null; } });
+    cv.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+  function homeAt(run, p) { const i = cellAt(run, p.x, p.y); return run.sc.homes.indexOf(i); }
+  function onDown(run, p, e) {
+    // home toggles for the probe prediction
+    if (run.phase === 'probePredict') {
+      const k = homeAt(run, p);
+      if (k >= 0) { if (run.predicted.has(k)) run.predicted.delete(k); else run.predicted.add(k); ev('predTap', k); draw(run); renderControls(run); }
+      return;
+    }
+    if (run.phase !== 'edit' || run.cond !== 'A') return;
+    downA(run, p, e);
+  }
+  function onMove(run, p) { if (run.drag) moveA(run, p); }
+  function onUp(run, p) { if (run.drag) upA(run, p); }
+  function onCancel(run) { if (run.drag) { run.drag = null; draw(run); } }
+
+  /* ---------- pieces */
+  function doUndo(run) {
+    if (!run.undo.length || run.phase !== 'edit') return;
+    // Undo reverses the last board change; a piece that stays in the tray keeps the way it was turned (model)
+    if (!act(run, ['undo']).ok) return;
+    run.rec.edits.undo++; ev('undo'); renderControls(run); draw(run); save();
+  }
+  function downA(run, p, e) {
+    const g = run.g;
+    let hit = null;
+    const i = cellAt(run, p.x, p.y);
+    if (i >= 0) {
+      const occ = occupancy(run, -1);
+      if (occ[i] >= 0) {
+        const pc = run.pieces[occ[i]];
+        hit = { id: pc.id, from: 'board', gx: (p.x - (g.bx + pc.x * g.C)), gy: (p.y - (g.by + pc.y * g.C)) };
+      }
+    } else if (p.y >= g.trayY - g.C * 0.1) {
+      for (const pc of run.pieces) {
+        if (pc.placed) continue;
+        const r = trayPieceRect(run, pc);
+        const s = run.slots[pc.id];
+        if (p.x >= s.x - 6 && p.x <= s.x + s.w + 6 && p.y >= g.trayY - 4 && p.y <= g.trayY + g.trayH + 4) {
+          // grab offset expressed in board scale so the grabbed cell stays under the finger
+          const fx = Math.min(r.w - 0.01, Math.max(0, (p.x - r.ox) / r.ts)), fy = Math.min(r.hh - 0.01, Math.max(0, (p.y - r.oy) / r.ts));
+          hit = { id: pc.id, from: 'tray', gx: fx * g.C, gy: fy * g.C };
+          break;
+        }
+      }
+    }
+    if (!hit) return;
+    run.drag = { ...hit, sx: p.x, sy: p.y, x: p.x, y: p.y, active: false, touch: e.pointerType !== 'mouse' };
+  }
+  function dragTopLeft(run) {
+    const d = run.drag, g = run.g;
+    // a piece taken from the tray is lifted above the finger so it stays visible; a piece already on
+    // the board keeps its grab point, so a sideways move stays in its row
+    const lift = d.touch && d.from === 'tray' ? g.C * 0.9 : 0;
+    return { x: d.x - d.gx, y: d.y - d.gy - lift };
+  }
+  function dragSnap(run) {
+    const g = run.g, tl = dragTopLeft(run), pc = run.pieces[run.drag.id];
+    const ax = Math.round((tl.x - g.bx) / g.C), ay = Math.round((tl.y - g.by) / g.C);
+    const cells = FLE.placementCells(pc.type, pc.o, ax, ay);
+    const legal = FLE.canPlace(run.sc, occupancy(run, pc.id), cells, pc.id);
+    const [, hh] = dims(oriOf(pc));
+    const cy = tl.y + (hh * g.C) / 2;
+    const toTray = cy > g.by + g.bh + g.C * 0.25;
+    return { ax, ay, cells, legal, toTray };
+  }
+  function moveA(run, p) {
+    const d = run.drag;
+    d.x = p.x; d.y = p.y;
+    if (!d.active && Math.hypot(p.x - d.sx, p.y - d.sy) > 8) { d.active = true; firstAction(run); ev('dragStart', [d.id, d.from]); }
+    if (d.active) draw(run);
+  }
+  /** Drops are counted for the verb tripwire: every release of a dragged piece is a drop; a refused drop and a
+   *  release on the piece's own cell are the manipulation errors (protocol §6, reading 4). */
+  function upA(run, p) {
+    const d = run.drag; d.x = p.x; d.y = p.y;
+    const pc = run.pieces[d.id];
+    if (!d.active) { // tap = turn the piece
+      run.drag = null; rotatePiece(run, pc); return;
+    }
+    const s = dragSnap(run);
+    run.rec.edits.drops++;
+    if (s.toTray) {
+      if (pc.placed && act(run, ['unplace', pc.id]).ok) { run.rec.edits.unplace++; ev('unplace', pc.id); }
+      else { run.rec.edits.drops--; } // a tray piece dropped back on the tray: nothing happened
+    } else if (s.legal) {
+      const wasPlaced = pc.placed;
+      const same = wasPlaced && pc.x === s.ax && pc.y === s.ay;
+      if (act(run, [wasPlaced ? 'move' : 'place', pc.id, s.ax, s.ay]).ok) {
+        if (wasPlaced) { run.rec.edits.move++; if (same) { run.rec.edits.sameCell++; ev('sameCell', pc.id); } else ev('move', [pc.id, s.ax, s.ay]); }
+        else { run.rec.edits.place++; firstPlace(run); ev('place', [pc.id, pc.type, pc.o, s.ax, s.ay]); }
+      } else { run.rec.edits.fail++; ev('dropFail', pc.id); flashShake(run); flashHint(run, TXT.dropFail); }
+    } else { run.rec.edits.fail++; ev('dropFail', pc.id); flashShake(run); flashHint(run, TXT.dropFail); }
+    run.drag = null; renderControls(run); draw(run); save();
+  }
+  function rotatePiece(run, pc) {
+    firstAction(run);
+    const n = FLE.ORIENTS[pc.type].length;
+    if (n === 1) return;
+    // a tray turn is not a board change: not on the undo stack
+    if (!pc.placed) { if (act(run, ['tturn', pc.id]).ok) { run.rec.edits.turnTray++; ev('rotate', [pc.id, 'tray', pc.o]); draw(run); save(); } return; }
+    // on the board the piece turns about its centre, nudged one square if it does not fit (same rule as the model)
+    if (act(run, ['bturn', pc.id]).ok) {
+      run.rec.edits.turnBoard++; ev('rotate', [pc.id, 'board', pc.o, pc.x, pc.y]); renderControls(run); draw(run); save(); return;
+    }
+    run.rec.edits.turnFail++; ev('rotateFail', pc.id); flashShake(run); flashHint(run, TXT.turnFail);
+  }
+  /** A short reason on the hint line for input that was refused; the usual hint comes back after a moment. */
+  function flashHint(run, html) {
+    setHint(run, html);
+    clearTimeout(run.hintTimer);
+    run.hintTimer = setTimeout(() => { if (!run.dead && run.phase === 'edit') setHint(run); }, 1800);
+  }
+  function flashShake(run) {
+    const cv = run.el.canvas; cv.classList.remove('shake'); void cv.offsetWidth; cv.classList.add('shake');
+  }
+
+  Object.assign(U, { attachInput, doUndo, dragTopLeft, dragSnap, flashShake });
+})();
+</script>
+<script>/*
+ * FL-2B scene runner: one board or probe from start to end, through the board model. Both arms run through the same
+ * code; the arm only selects the scene and the one-line reminder. The consequence layer (lit windows, ember squares,
+ * the session strip, one tone per home) is identical in both arms.
+ * One of the page modules (load order: ui_common, ui_record, [ui_hosted], ui_render, ui_preview, ui_input, ui_scene,
+ * ui_testhooks, ui_flow). Modules share nothing but window.FL2B_UI.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL2B_UI;
+  const { ARM, ARM_ALLOWANCE_MS, DATA, FLE, FLM, IDLE_MS, REC, REDUCED, SAVE_EVERY_TICKS, SKIP_AFTER_MS, SKIP_AFTER_TRIES, STEP_MS, TAIL_MS, TEACH_SKIP_MS, TEACH_SKIP_TRIES, TXT, app } = U;
+  const armLabel = (...a       ) => U.armLabel(...a);
+  const attachInput = (...a       ) => U.attachInput(...a);
+  const clear = (...a       ) => U.clear(...a);
+  const doUndo = (...a       ) => U.doUndo(...a);
+  const draw = (...a       ) => U.draw(...a);
+  const ev = (...a       ) => U.ev(...a);
+  const go = (...a       ) => U.go(...a);
+  const h = (...a       ) => U.h(...a);
+  const logError = (...a       ) => U.logError(...a);
+  const now = (...a       ) => U.now(...a);
+  const previewOff = (...a       ) => U.previewOff(...a);
+  const previewOn = (...a       ) => U.previewOn(...a);
+  const save = (...a       ) => U.save(...a);
+  const textQ = (...a       ) => U.textQ(...a);
+  const validText = (...a       ) => U.validText(...a);
+  /* ------------------------------------------------------------------ scenes */
+  function teardownScene() {
+    if (U.RUN) { U.RUN.dead = true; U.RUN.detach && U.RUN.detach(); U.RUN = null; }
+  }
+
+  function newEdits() { return { place: 0, move: 0, unplace: 0, turnTray: 0, turnBoard: 0, undo: 0, fail: 0, turnFail: 0, drops: 0, sameCell: 0 }; }
+  /** st: { kind: 'scene'|'probe', scene: id, arm: 'B'|'S', block: 0|1 (arm index; 2 = probes; 3 = optional), idx, g3? } */
+  function startScene(st, onDone) {
+    const def = DATA.scenes[st.scene];
+    const sc = FLE.parseScene(def);
+    const kind = def.kind;
+    const cond = kind === 'probe' ? 'P' : 'A';
+    const arm = st.arm;
+    // the board that was in progress before a reload (same step, same scene) is restored, not restarted
+    const prev = REC.cur && REC.cur.step === U.stepIdx && REC.cur.sid === def.id && !!REC.cur.g3 === !!st.g3 ? REC.cur : null;
+    const run = {
+      st, cond, arm, def, sc, kind, onDone, dead: false, ended: false,
+      phase: kind === 'probe' ? 'probePredict' : 'edit',
+      // the board itself lives in the model (src2b/model.ts); every change goes through act()
+      board: null,
+      get fuel() { return this.board.fuel; }, get pieces() { return this.board.pieces; },
+      get undo() { return this.board.undo; },
+      drag: null, preview: false, previewStart: 0, anim: null, burn: null, markers: null, drawn: null,
+      predicted: new Set(), barnAnswer: null, attempts: null, visibleMs: 0, lastTick: performance.now(), ticks: 0,
+      solvedOnce: false, warmedCounted: false,
+      blockStartVisible: blockVisibleSoFar(st.block),
+      rec: prev || { step: U.stepIdx, sid: def.id, arm, geom: def.geom || null, variant: def.variant || null, sym: def.sym || 'id', kind, block: st.block, idx: st.idx, g3: !!st.g3, startT: now(), endT: null, visibleMs: 0,
+        attempts: [], outcome: null, edits: newEdits(), previewCount: 0, previewMs: 0, firstActionMs: null, firstPlaceMs: null, editsAtFirstStrike: null,
+        probe: null, resumed: [], sceneHash: DATA.hashes[def.id], log: [], stateHash: null, logHash: null, ptr: [], idleMs: 0, pointerType: null, turnHintShown: false, barnHintShown: false },
+      probe: kind === 'probe' ? (prev && prev.probe ? prev.probe : { predicted: null, barn: null, warm: null, caught: null, correct: null, why: '' }) : null,
+      timeUp: false, lastInput: performance.now(), lastPtrCell: -2,
+    };
+    run.rec.probe = run.probe;
+    run.attempts = run.rec.attempts;
+    if (prev) {
+      // the input log is the record of the board: replaying it puts the board back exactly as it was
+      const rr = FLM.replayLog(sc, cond, def.id, DATA.hashes[def.id], def.laid || [], (prev.log || []).map((e) => e.slice(1)));
+      run.board = rr.board;
+      if (rr.error) logError('resumeReplay');
+      restoreRun(run, prev);
+    } else run.board = FLM.newBoard(sc, cond, def.id, DATA.hashes[def.id], def.laid || []);
+    run.rec.stateHash = FLM.stateHash(run.board);
+    U.RUN = run; REC.cur = run.rec;
+    if (st.g3 && REC.g3.sceneStart == null) REC.g3.sceneStart = now();
+    buildSceneDom(run);
+    ev(prev ? 'sceneResume' : 'scene', [def.id, arm || '', kind]);
+    if (prev) afterRestore(run);
+    save();
+    return run;
+  }
+  function blockVisibleSoFar(block) {
+    let s = 0; for (const r of REC.scenes) if (r.block === block) s += r.visibleMs; return s;
+  }
+  /** The state needed to put a board back exactly as it was after a reload. */
+  function liveState(run) {
+    return {
+      phase: run.phase, timeUpFrom: run.timeUpFrom || null, predicted: [...run.predicted], barnAnswer: run.barnAnswer, warmedCounted: run.warmedCounted,
+      pieces: run.cond === 'A' ? run.pieces.map((p) => [p.id, p.type, p.o, p.x, p.y, p.placed ? 1 : 0]) : undefined,
+    };
+  }
+  function restoreRun(run, prev) {
+    const L = prev.live || {};
+    run.visibleMs = prev.visibleMs || 0;
+    run.rec.resumed = (prev.resumed || []).concat([[now(), L.phase || '']]);
+    run.restoredPhase = L.phase || '';
+    run.timeUpFrom = L.timeUpFrom || null;
+    run.solvedOnce = prev.attempts.some((a) => a.success);
+    run.warmedCounted = !!L.warmedCounted || run.solvedOnce;
+    if (Array.isArray(L.predicted)) run.predicted = new Set(L.predicted);
+    if (L.barnAnswer === true || L.barnAnswer === false) run.barnAnswer = L.barnAnswer;
+  }
+  function afterRestore(run) {
+    const settle = () => { setHint(run); renderControls(run); draw(run); };
+    if (run.kind === 'probe') {
+      const pr = run.probe;
+      if (pr.warm === null) { run.phase = 'probePredict'; } // the outcome was not seen yet: the marks come back as they were
+      else if (!pr.why) { showStatic(run, run.fuel); showProbeWhy(run); }
+      else { showStatic(run, run.fuel); run.phase = 'result'; banner(run, resultText(run.burn), [['Next', 'primary', () => endScene(run, 'probe')]]); }
+      settle(); return;
+    }
+    const last = run.attempts[run.attempts.length - 1];
+    // the time-up screen comes back as it was: over the result if time ran out on a result, otherwise over the board as built
+    if (run.restoredPhase === 'timeUp') {
+      if (run.timeUpFrom === 'result' && last) showStatic(run, currentFuel(run));
+      run.timeUp = true; settle(); showTimeUp(run); return;
+    }
+    // a result that was on screen (or still burning) comes back, success or miss, with its markers
+    const onScreen = ['burning', 'result'].includes(run.restoredPhase);
+    if (last && (last.success || onScreen)) { showStatic(run, currentFuel(run)); run.phase = 'result'; resultBanner(run); settle(); return; }
+    run.phase = 'edit'; settle();
+  }
+  /** Show the finished burn of a structure without animating it (restored boards only). */
+  function showStatic(run, fuel) {
+    const b = FLE.burn(run.sc, fuel);
+    run.burn = b; run.markers = b.success || run.kind === 'probe' ? [] : FLE.missMarkers(run.sc, fuel, b);
+    run.anim = { start: performance.now(), b, done: true };
+    draw(run);
+  }
+
+  /* ---------- DOM for a board */
+  function buildSceneDom(run) {
+    clear();
+    const isProbe = run.kind === 'probe';
+    const bar = h('div', { class: 'bar' });
+    if (isProbe) bar.append(h('div', { class: 'badge' }, 'Quick puzzle ' + (run.st.idx + 1) + ' of 2'));
+    else bar.append(h('div', { class: 'badge' }, h('span', null, run.st.g3 ? 'One more board' : armLabel(run.arm))));
+    const right = h('div', { class: 'dots' });
+    if (!isProbe && run.st.block < 2) for (let k = 0; k < 4; k++) right.append(h('i', { class: k < run.st.idx ? 'done' : k === run.st.idx ? 'on' : '' }));
+    if (run.st.g3) right.append(h('button', { style: 'min-height:36px;padding:4px 12px', onclick: () => endScene(run, 'quit') }, 'Finish now'));
+    right.append(muteButton());
+    bar.append(right);
+    const strip = h('div', { class: 'strip', id: 'strip' });
+    const hint = h('div', { class: 'hint', id: 'hint' });
+    const stage = h('div', { id: 'stage' });
+    const canvas = (h('canvas', { id: 'board', 'aria-label': 'Game board' })                     );
+    stage.append(canvas);
+    const controls = h('div', { class: 'controls', id: 'controls' });
+    app.append(bar, strip, hint, stage, controls);
+    run.el = { hint, canvas, controls, stage, strip, ctx: (canvas.getContext('2d')                            ) };
+    paintStrip(run);
+    layout(run);
+    attachInput(run);
+    renderControls(run);
+    setHint(run);
+    draw(run);
+    const onResize = () => { if (!run.dead) { layout(run); draw(run); } };
+    addEventListener('resize', onResize);
+    const ticker = setInterval(() => tick(run), 250);
+    run.detach = () => { removeEventListener('resize', onResize); clearInterval(ticker); };
+  }
+  /** The session strip: the homes warmed so far in this session (the consequence layer, identical in both arms). */
+  function paintStrip(run) {
+    const el = run.el.strip; if (!el) return;
+    el.innerHTML = '';
+    const n = REC.warmed || 0;
+    el.append(h('span', { class: 'small' }, TXT.strip + ': '), h('b', { id: 'warmedCount' }, String(n)));
+    const icons = h('span', { class: 'homes', 'aria-hidden': 'true' });
+    for (let k = 0; k < Math.min(n, 24); k++) icons.append(h('i'));
+    el.append(icons);
+  }
+  function muteButton() {
+    const b = h('button', { class: 'mute', 'aria-label': REC.mute ? 'Sound off' : 'Sound on', title: 'Sound', onclick: () => {
+      REC.mute = !REC.mute; REC.muteLog.push([now(), REC.mute ? 1 : 0]); ev('mute', REC.mute ? 1 : 0);
+      b.textContent = REC.mute ? '🔇' : '🔈'; b.setAttribute('aria-label', REC.mute ? 'Sound off' : 'Sound on'); save();
+    } }, REC.mute ? '🔇' : '🔈');
+    return b;
+  }
+  /* ---------- one short tone per home warmed (procedural; nothing else sounds) */
+  let audio      = null;
+  function tone(k) {
+    if (REC.mute) return;
+    try {
+      const AC = W.AudioContext || W.webkitAudioContext; if (!AC) return;
+      if (!audio) audio = new AC();
+      if (audio.state === 'suspended') audio.resume();
+      const t0 = audio.currentTime + 0.02 + k * 0.12;
+      const o = audio.createOscillator(), gn = audio.createGain();
+      o.type = 'sine'; o.frequency.value = 523.25 * Math.pow(2, (k % 3) * 4 / 12); // a soft rising third per home
+      gn.gain.setValueAtTime(0.0001, t0); gn.gain.exponentialRampToValueAtTime(0.18, t0 + 0.02); gn.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35);
+      o.connect(gn); gn.connect(audio.destination); o.start(t0); o.stop(t0 + 0.4);
+    } catch (e) { /* no sound: the page goes on */ }
+  }
+  function tick(run) {
+    if (run.dead) return;
+    const t = performance.now();
+    if (document.visibilityState === 'visible') {
+      run.visibleMs += t - run.lastTick;
+      // idle: visible time with no touch for longer than IDLE_MS (counted from the end of that pause's first IDLE_MS)
+      if (t - run.lastInput > IDLE_MS) run.rec.idleMs = Math.round((run.rec.idleMs || 0) + (t - run.lastTick));
+    }
+    run.lastTick = t;
+    run.rec.visibleMs = Math.round(run.visibleMs);
+    if (run.st.g3) updateG3(run);
+    if (run.kind !== 'probe' && !run.st.g3 && !run.timeUp && run.st.block < 2 &&
+      run.blockStartVisible + run.visibleMs > ARM_ALLOWANCE_MS && (run.phase === 'edit' || run.phase === 'result')) {
+      run.timeUp = true; ev('timeUp', run.def.id); showTimeUp(run);
+    }
+    if (run.phase === 'edit' || run.phase === 'result') renderControls(run);
+    if (++run.ticks % SAVE_EVERY_TICKS === 0) save();
+  }
+
+  /* ---------- geometry */
+  function layout(run) {
+    const vw = Math.min(innerWidth, 480), vh = innerHeight;
+    const availW = vw - 16, availH = vh - 228;
+    const C = Math.max(28, Math.min(66, Math.floor(Math.min(availW / 7.3, availH / 10.45))));
+    const pad = Math.round(C * 0.15);
+    const trayGap = Math.round(C * 0.25), trayH = Math.round(C * 1.9);
+    const cw = 7 * C + 2 * pad, chh = 8 * C + 2 * pad + trayGap + trayH;
+    const dpr = devicePixelRatio || 1;
+    const cv = run.el.canvas;
+    cv.width = Math.round(cw * dpr); cv.height = Math.round(chh * dpr);
+    cv.style.width = cw + 'px'; cv.style.height = chh + 'px';
+    run.el.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    run.g = { C, pad, bx: pad, by: pad, bw: 7 * C, bh: 8 * C, trayY: pad + 8 * C + trayGap, trayH, cw, ch: chh };
+    if (run.cond === 'A') layoutTray(run);
+  }
+  function oriOf(p) { return FLE.ORIENTS[p.type][p.o % FLE.ORIENTS[p.type].length]; }
+  function dims(ori) { let w = 0, hh = 0; for (const [x, y] of ori) { if (x + 1 > w) w = x + 1; if (y + 1 > hh) hh = y + 1; } return [w, hh]; }
+  function layoutTray(run) {
+    const g = run.g, ts = g.C * 0.5;
+    // fixed slot per piece; slot width fits the widest orientation of that piece
+    const widths = run.pieces.map((p) => Math.max(...FLE.ORIENTS[p.type].map((o) => dims(o)[0])) * ts);
+    const gap = g.C * 0.35;
+    const total = widths.reduce((a, b) => a + b, 0) + gap * (widths.length - 1);
+    let x = g.bx + (g.bw - total) / 2;
+    run.slots = run.pieces.map((p, k) => { const s = { x, y: g.trayY + (g.trayH - 3 * ts) / 2, w: widths[k], h: 3 * ts, ts }; x += widths[k] + gap; return s; });
+  }
+  function trayPieceRect(run, p) {
+    const s = run.slots[p.id], ori = oriOf(p), [w, hh] = dims(ori);
+    const ox = s.x + (s.w - w * s.ts) / 2, oy = s.y + (s.h - hh * s.ts) / 2;
+    return { ox, oy, w, hh, ts: s.ts };
+  }
+  function cellAt(run, px, py) {
+    const g = run.g; const x = Math.floor((px - g.bx) / g.C), y = Math.floor((py - g.by) / g.C);
+    if (x < 0 || y < 0 || x >= 7 || y >= 8) return -1;
+    return y * 7 + x;
+  }
+  function occupancy(run, ignoreId) {
+    const occ = new Int16Array(56).fill(-1);
+    for (const p of run.pieces) if (p.placed && p.id !== ignoreId) for (const [x, y] of FLE.placementCells(p.type, p.o, p.x, p.y)) occ[y * 7 + x] = p.id;
+    return occ;
+  }
+  /** Current placed-fuel set for the board (the only input to burn(); brush is in the scene). */
+  function currentFuel(run) {
+    if (run.cond === 'A') {
+      const f = FLE.emptyFuel(run.sc);
+      for (const p of run.pieces) if (p.placed && !(run.drag && run.drag.id === p.id && run.drag.active)) for (const [x, y] of FLE.placementCells(p.type, p.o, p.x, p.y)) f[y * 7 + x] = 1;
+      return f;
+    }
+    return run.fuel;
+  }
+
+  /* ---------- controls and hint */
+  function setHint(run, html         ) {
+    const el = run.el.hint;
+    if (html !== undefined) { el.innerHTML = html; return; }
+    if (run.kind === 'probe') {
+      if (run.phase === 'probePredict') el.innerHTML = TXT.probePredict + (run.sc.barns.length ? ' ' + TXT.probeBarn : '') + (probeReady(run) ? ' ' + TXT.probeReady : '');
+      else el.innerHTML = '';
+      return;
+    }
+    if (run.phase !== 'edit') { el.innerHTML = ''; return; }
+    if (run.kind === 'teach') {
+      // teaching boards only: after a strike that caught the barn, the board says why; after a miss with the piece still
+      // lying as it came from the tray, it says how to turn it (both arms alike; FL-1 skip diagnosis)
+      const last = run.attempts[run.attempts.length - 1];
+      const caught = !!(last && last.caught && last.caught.length);
+      const noTurn = !!last && !last.success && run.pieces.every((p) => p.o === 0);
+      if (caught && !run.rec.barnHintShown) { run.rec.barnHintShown = true; ev('barnHint', run.def.id); }
+      if (noTurn && !caught && !run.rec.turnHintShown) { run.rec.turnHintShown = true; ev('turnHint', run.def.id); }
+      el.innerHTML = (caught ? TXT.teachBarn : noTurn ? TXT.teachTurn : TXT.teachHint) + '<br>' + TXT.previewLine;
+      return;
+    }
+    el.innerHTML = TXT.mainHint[run.arm] || TXT.mainHint.B;
+  }
+  function probeReady(run) { return run.predicted.size >= 1 && (!run.sc.barns.length || run.barnAnswer === true || run.barnAnswer === false); }
+  function renderControls(run) {
+    const c = run.el.controls;
+    if (run.preview) return; // never rebuild the buttons under a finger that is holding Preview
+    const key = run.phase + '|' + run.undo.length + '|' + run.predicted.size + '|' + run.barnAnswer + '|' + canSkip(run) + '|' + run.solvedOnce;
+    if (c.dataset.key === key) return;
+    c.dataset.key = key;
+    c.innerHTML = '';
+    if (run.kind === 'probe') {
+      if (run.phase === 'probePredict') {
+        if (run.sc.barns.length) {
+          const yes = h('button', { class: 'choice half' + (run.barnAnswer === true ? ' sel' : ''), type: 'button', 'data-barn': 'yes', onclick: () => barnAnswer(run, true) }, 'Barn: yes, it catches');
+          const no = h('button', { class: 'choice half' + (run.barnAnswer === false ? ' sel' : ''), type: 'button', 'data-barn': 'no', onclick: () => barnAnswer(run, false) }, 'Barn: no, it is safe');
+          c.append(h('div', { class: 'row grow' }, yes, no));
+        }
+        c.append(h('button', { class: 'strike grow', disabled: !probeReady(run), onclick: () => strike(run) }, 'Strike'));
+      }
+      return;
+    }
+    if (run.phase === 'edit') {
+      c.append(h('button', { disabled: run.undo.length === 0, onclick: () => doUndo(run), 'aria-label': 'Undo' }, 'Undo'));
+      const pv = h('button', { class: 'hold' + (run.preview ? ' active' : ''), 'aria-label': 'Hold to preview' }, 'Preview');
+      const startPv = (e) => { e.preventDefault(); previewOn(run); pv.classList.add('active'); };
+      const endPv = () => { previewOff(run); pv.classList.remove('active'); };
+      pv.addEventListener('pointerdown', startPv); pv.addEventListener('pointerup', endPv); pv.addEventListener('pointercancel', endPv); pv.addEventListener('pointerleave', endPv);
+      pv.addEventListener('contextmenu', (e) => e.preventDefault());
+      c.append(pv);
+      c.append(h('button', { class: 'strike', onclick: () => strikeRequest(run) }, 'Strike'));
+      if (run.solvedOnce) c.append(h('button', { onclick: () => endScene(run, 'solved') }, 'Next'));
+      else if (canSkip(run)) c.append(h('button', { onclick: () => endScene(run, 'skipped') }, 'Skip'));
+    }
+    // 'timeUp', 'burning' and 'result': no controls (the banner holds the only buttons)
+  }
+  function barnAnswer(run, v) { run.barnAnswer = v; ev('barnTap', v ? 1 : 0); setHint(run); renderControls(run); save(); }
+  function canSkip(run) {
+    if (run.kind === 'probe') return false;
+    const fails = run.attempts.filter((a) => !a.success).length;
+    if (run.kind === 'teach') return run.visibleMs >= TEACH_SKIP_MS || fails >= TEACH_SKIP_TRIES;
+    return run.visibleMs >= SKIP_AFTER_MS || fails >= SKIP_AFTER_TRIES;
+  }
+
+  function firstAction(run) { if (run.rec.firstActionMs == null) run.rec.firstActionMs = Math.round(run.visibleMs); }
+  function firstPlace(run) { if (run.rec.firstPlaceMs == null) run.rec.firstPlaceMs = Math.round(run.visibleMs); }
+
+  /* ---------- board actions */
+  /** Every board change goes through the model and into the board's input log, with its time. */
+  function act(run, a       ) {
+    const r = FLM.apply(run.board, a);
+    if (!r.ok) { ev('refused', [a[0], r.reason]); return r; }
+    run.rec.log.push([Math.round(now()), ...a]);
+    run.rec.stateHash = FLM.stateHash(run.board);
+    run.rec.logHash = FLM.logHash(run.rec.log.map((e) => e.slice(1)));
+    return r;
+  }
+
+  /* ---------- strike */
+  function strikeRequest(run) {
+    if (run.phase !== 'edit' || run.drag) return; // never mid-drag
+    firstAction(run);
+    strike(run);
+  }
+  function strike(run) {
+    if (run.anim) return;
+    previewOff(run);
+    const isProbe = run.kind === 'probe';
+    const predicted = isProbe ? [...run.predicted].sort((x, y) => x - y) : null;
+    const barn = isProbe && run.sc.barns.length ? run.barnAnswer : null;
+    const r = act(run, ['strike', predicted, barn]);
+    if (!r.ok) { logError('strike'); return; }
+    const st = r.strike;
+    const fuel = FLM.fuelOf(run.board);
+    const b = FLE.burn(run.sc, fuel);
+    // the structure, the squares that burnt (placed and brush), the barns caught, the homes lit, the prediction (probes)
+    const att      = { t: now(), structure: st.fuel, burnt: FLE.fuelList(fuel).filter((i) => b.t[i] >= 0), brushBurnt: run.sc.brush.filter((i) => b.t[i] >= 0),
+      predicted: st.predicted, barnPredicted: st.barn, warm: st.warm, cold: st.cold, caught: st.caught, safe: st.safe, success: st.success, steps: st.steps,
+      previewedBefore: run.rec.previewCount > (run.pvAtLastStrike || 0), previewsTotal: run.rec.previewCount,
+      tiling: run.cond === 'A' ? run.pieces.filter((p) => p.placed).map((p) => [p.type, p.o, p.x, p.y]) : undefined };
+    if (isProbe) run.probe = Object.assign(run.probe, { predicted: att.predicted, barn: att.barnPredicted, warm: b.warm, caught: b.caught, correct: att.predicted.join(',') === b.warm.join(',') && (barn === null || barn === (b.caught.length > 0)) });
+    run.rec.probe = run.probe;
+    if (!run.rec.editsAtFirstStrike) run.rec.editsAtFirstStrike = { ...run.rec.edits, previewCount: run.rec.previewCount, visibleMs: Math.round(run.visibleMs) };
+    run.attempts.push(att);
+    // probes show the outcome only (which squares burnt, which homes warmed, whether the barn caught): no miss markers
+    run.burn = b; run.markers = b.success || isProbe ? [] : FLE.missMarkers(run.sc, fuel, b);
+    run.phase = 'burning';
+    run.anim = { start: performance.now(), b };
+    run.pvAtLastStrike = run.rec.previewCount;
+    ev('strike', [b.success ? 1 : 0, b.warm.length, b.cold.length, b.caught.length]);
+    if (run.st.g3) updateG3(run);
+    save();
+    setHint(run, '');
+    renderControls(run);
+    // the consequence layer: one short tone per home as it warms (first success of this board only), in both arms alike
+    if (b.success && !run.warmedCounted && !isProbe) b.homeT.forEach((t, k) => setTimeout(() => { if (!run.dead) tone(k); }, t * STEP_MS));
+    animate(run);
+  }
+  function animate(run) {
+    if (run.dead) return;
+    const a = run.anim; if (!a) return;
+    const tn = performance.now();
+    const el = tn - a.start;
+    // frame pacing: the interval between frames while the burn is shown (only while the page is visible)
+    if (a.lastFrame != null && document.visibilityState === 'visible') (a.gaps = a.gaps || []).push(tn - a.lastFrame);
+    a.lastFrame = tn;
+    draw(run);
+    if (el < (a.b.steps + 1) * STEP_MS + TAIL_MS) { requestAnimationFrame(() => animate(run)); return; }
+    a.done = true;
+    const gaps = (a.gaps || []).slice().sort((x, y) => x - y);
+    const att = run.attempts[run.attempts.length - 1];
+    if (att && gaps.length) att.frames = { n: gaps.length + 1, meanMs: +(gaps.reduce((s, x) => s + x, 0) / gaps.length).toFixed(1), p95Ms: +gaps[Math.min(gaps.length - 1, Math.floor(gaps.length * 0.95))].toFixed(1), maxMs: +gaps[gaps.length - 1].toFixed(1), longOver50: gaps.filter((x) => x > 50).length };
+    afterBurn(run);
+  }
+  /** Free play only (owner landing): the state hash and the burn's frame pacing, for the phone check. */
+  function freeCheckLine(run) {
+    if (REC.slot !== 'free' || run.kind === 'probe') return null;
+    const att = run.attempts[run.attempts.length - 1]; const f = att && att.frames;
+    return h('div', { class: 'small', id: 'checkLine' }, 'Check: state ' + String(run.rec.stateHash).slice(0, 12) + ' after ' + run.rec.log.length + ' actions' + (f ? '; burn frames mean ' + f.meanMs + ' ms, 95% ' + f.p95Ms + ' ms, longest ' + f.maxMs + ' ms (' + f.n + ' frames)' : ''));
+  }
+  function resultText(b) {
+    if (b.success) return TXT.success;
+    if (b.caught.length && b.cold.length) return TXT.barnAndMiss;
+    if (b.caught.length) return TXT.barn;
+    return TXT.miss;
+  }
+  function resultBanner(run) {
+    const b = run.burn;
+    if (b.success) {
+      run.solvedOnce = true;
+      if (!run.warmedCounted) { run.warmedCounted = true; REC.warmed = (REC.warmed || 0) + b.warm.length; paintStrip(run); ev('warmed', REC.warmed); }
+      banner(run, TXT.success, [['Next', 'primary', () => endScene(run, 'solved')]], freeCheckLine(run));
+    } else {
+      // a miss or a caught barn: the structure stays as it was for repair (nothing is consumed)
+      const btns = [['Try again', 'primary', () => tryAgain(run)]];
+      if (run.solvedOnce) btns.unshift(['Next', '', () => endScene(run, 'solved')]);
+      else if (canSkip(run)) btns.unshift(['Skip', '', () => endScene(run, 'skipped')]);
+      banner(run, resultText(b), btns, freeCheckLine(run));
+    }
+  }
+  function afterBurn(run) {
+    const b = run.burn;
+    if (run.kind === 'probe') {
+      if (!run.probe.why) { showProbeWhy(run); return; }
+      run.phase = 'result'; banner(run, resultText(b), [['Next', 'primary', () => endScene(run, 'probe')]]); save(); return;
+    }
+    run.phase = 'result';
+    resultBanner(run);
+    save();
+    draw(run);
+  }
+  function tryAgain(run) {
+    removeBanner(); run.anim = null; run.burn = null; run.markers = null; run.phase = 'edit';
+    ev('retry'); setHint(run); renderControls(run); draw(run); save();
+  }
+  function endScene(run, outcome) {
+    if (run.ended) return;
+    removeBanner(); previewOff(run);
+    act(run, ['end', outcome]);
+    run.rec.live = liveState(run);
+    run.ended = true;
+    run.rec.outcome = outcome; run.rec.endT = now(); run.rec.visibleMs = Math.round(run.visibleMs);
+    if (run.kind === 'probe') REC.probes.push(run.rec); else REC.scenes.push(run.rec);
+    if (run.st.g3) { updateG3(run, outcome); REC.g3.sceneEnd = now(); }
+    REC.cur = null;
+    ev('sceneEnd', [run.def.id, outcome]);
+    save();
+    const cb = run.onDone; teardownScene(); cb();
+  }
+  /** The optional board's record is kept current while it is played (a closed tab keeps what happened). */
+  function updateG3(run, outcome         ) {
+    const g = REC.g3; if (!g) return;
+    g.sceneVisibleMs = Math.round(run.visibleMs); g.interactions = countInteractions(run.rec); g.strikes = run.rec.attempts.length;
+    g.solved = run.rec.attempts.some((a) => a.success);
+    g.sceneOutcome = outcome || (g.solved ? 'solved' : 'inProgress');
+  }
+  /** Purposeful interactions: board changes, Preview and strikes (turning a piece in the tray is not one). */
+  function countInteractions(r) { const e = r.edits; return e.place + e.move + e.unplace + e.turnBoard + e.undo + r.previewCount + r.attempts.length; }
+  function showTimeUp(run) {
+    // modal: no board input and no controls until Continue
+    run.timeUpFrom = run.timeUpFrom || run.phase;
+    previewOff(run);
+    if (run.drag) run.drag = null;
+    run.phase = 'timeUp';
+    setHint(run, ''); renderControls(run); draw(run);
+    banner(run, TXT.timeUp, [['Continue', 'primary', () => {
+      // skip the rest of this arm straight to its questions
+      run.rec.outcome = run.attempts.some((x) => x.success) ? 'solved' : 'timeUp';
+      act(run, ['end', run.rec.outcome]);
+      run.rec.visibleMs = Math.round(run.visibleMs);
+      const blk = run.st.block;
+      run.rec.live = liveState(run);
+      run.ended = true; removeBanner(); run.rec.endT = now(); REC.scenes.push(run.rec); REC.cur = null; save();
+      teardownScene();
+      let i = U.stepIdx + 1;
+      while (U.FLOW[i] && U.FLOW[i].kind === 'scene' && U.FLOW[i].block === blk) { REC.scenes.push({ step: i, sid: U.FLOW[i].scene, arm: U.FLOW[i].arm, block: blk, idx: U.FLOW[i].idx, outcome: 'notReached', visibleMs: 0, attempts: [] }); i++; }
+      go(i);
+    }]]);
+    save();
+  }
+
+  /* ---------- banners */
+  function banner(run, msg, buttons, extra                     ) {
+    removeBanner();
+    const row = h('div', { class: 'row' });
+    for (const [label, cls, fn] of buttons) row.append(h('button', { class: cls, onclick: fn }, label));
+    const b = h('div', { class: 'banner', id: 'banner', role: 'status' }, h('div', { class: 'msg' }, msg), ...(extra ? [extra] : []), row);
+    app.append(b);
+  }
+  function removeBanner() { const b = document.getElementById('banner'); if (b) b.remove(); }
+
+  /* ---------- probes */
+  function showProbeWhy(run) {
+    run.phase = 'probeWhy';
+    const store                      = {}; const err = h('div', { class: 'err' });
+    const ta = textQ('why', TXT.why, store, true);
+    const b = h('div', { class: 'banner', id: 'banner' }, h('div', { class: 'msg' }, resultText(run.burn)), ta, err, h('div', { class: 'row' }, h('button', { class: 'primary', onclick: () => {
+      if (!validText(store.why)) { err.textContent = 'Please write a few words.'; return; }
+      run.probe.why = store.why; ev('probeWhy', run.def.id);
+      removeBanner();
+      run.phase = 'result'; banner(run, resultText(run.burn), [['Next', 'primary', () => endScene(run, 'probe')]]); save();
+    } }, 'Next')));
+    removeBanner(); app.append(b);
+    draw(run); save();
+  }
+
+  Object.assign(U, { teardownScene, startScene, liveState, tick, oriOf, dims, trayPieceRect, cellAt, occupancy, currentFuel, setHint, renderControls, firstAction, firstPlace, act, updateG3, paintStrip });
+})();
+</script>
+<script>/*
+ * FL-2B participant flow: consent, touch check, rules, two arms (teaching board, three scored boards, questions), two
+ * probes, the pairwise choice, the meaning sentence, the completion code, the optional board, exit; the owner landing
+ * (review build only); boot. Protocol: docs/fl2b/FL2B_01_PROTOCOL.md §4.
+ * One of the page modules (load order: ui_common, ui_record, [ui_hosted], ui_render, ui_preview, ui_input, ui_scene,
+ * ui_testhooks, ui_flow). Modules share nothing but window.FL2B_UI.
+ */
+'use strict';
+(function () {
+  const W = window       ;
+  const U = W.FL2B_UI;
+  const { ARM, BUILD, DATA, DEV, FLE, FLM, QS, REC, REDUCED, RESUME, STORE, TEST } = U;
+  const armLabel = (...a       ) => U.armLabel(...a);
+  const ev = (...a       ) => U.ev(...a);
+  const freezeRecord = (...a       ) => U.freezeRecord(...a);
+  const h = (...a       ) => U.h(...a);
+  const likert = (...a       ) => U.likert(...a);
+  const now = (...a       ) => U.now(...a);
+  const resetRecord = (...a       ) => U.resetRecord(...a);
+  const save = (...a       ) => U.save(...a);
+  const sheet = (...a       ) => U.sheet(...a);
+  const startScene = (...a       ) => U.startScene(...a);
+  const storedSession = (...a       ) => U.storedSession(...a);
+  const teardownScene = (...a       ) => U.teardownScene(...a);
+  const textQ = (...a       ) => U.textQ(...a);
+  const validText = (...a       ) => U.validText(...a);
+  /* ------------------------------------------------------------------ flow */
+  /** Scene ids: arm 1 plays the geometries as authored, arm 2 plays them under the 180-degree rotation (`r`); the teaching
+   *  boards TB/TS and the probes PB/PS are unrotated; the optional board is K4 in the chosen arm (unrotated). */
+  function armScenes(armKey, armIndex) {
+    const rot = armIndex === 1 ? 'r' : '';
+    return [armKey === 'B' ? 'TB' : 'TS', ...DATA.scored.map((k) => k + armKey + rot)];
+  }
+  function buildFlow(asg) {
+    const steps        = [{ kind: 'consent' }, { kind: 'warmup' }, { kind: 'rules' }];
+    asg.order.split('').forEach((armKey, ai) => {
+      steps.push({ kind: 'armIntro', arm: armKey, block: ai });
+      armScenes(armKey, ai).forEach((sid, si) => steps.push({ kind: 'scene', arm: armKey, scene: sid, block: ai, idx: si }));
+      steps.push({ kind: 'armQs', arm: armKey, block: ai });
+    });
+    steps.push({ kind: 'probeIntro' });
+    DATA.probes.forEach((p, k) => steps.push({ kind: 'probe', scene: p, block: 2, idx: k, arm: DATA.scenes[p].arm || null }));
+    steps.push({ kind: 'pairwise' }, { kind: 'meaning' }, { kind: 'complete' });
+    return steps;
+  }
+  function setSlot(asg) { REC.slot = asg.slot; REC.order = asg.order; REC.sym = asg.sym || 'r2'; REC.pairSide = asg.pairFirst; REC.optList = asg.optFirst; }
+  function start(asg) {
+    if (U.HOSTED) { U.HOSTED.pending(() => { resetRecord(); setSlot(asg); U.FLOW = buildFlow(asg); U.stepIdx = 0; ev('start', asg.slot); REC.steps.push([now(), 0, 'consent', '', '']); }); SHOW.consent(); return; } // hosted: consent comes first; the record, its assignment and its clock begin at "I agree"
+    resetRecord();
+    setSlot(asg);
+    U.FLOW = buildFlow(asg);
+    U.stepIdx = 0;
+    ev('start', asg.slot);
+    go(0);
+  }
+  function go(i        , resumed          ) {
+    U.stepIdx = i;
+    const st = U.FLOW[i];
+    REC.steps.push(resumed ? [now(), i, st.kind, st.arm || '', st.scene || '', 'resumed'] : [now(), i, st.kind, st.arm || '', st.scene || '']);
+    save();
+    teardownScene();
+    const fn = SHOW[st.kind];
+    if (!fn) throw new Error('no step ' + st.kind);
+    fn(st);
+  }
+  function next() { go(U.stepIdx + 1); }
+  /** The two arm keys in the order a list shows them (pairwise sides, optional offer), from the slot's assignment. */
+  function listOrder(first) { const f = first === 'S' ? 'S' : 'B'; return [f, f === 'B' ? 'S' : 'B']; }
+
+  /* ------------------------------------------------------------------ static steps */
+  const SHOW                                     = {};
+  const CONSENT_VERSION = 'FL2B-CONSENT-1-DRAFT';
+  function declinedScreen() { sheet(h('h1', null, 'No problem.'), h('p', null, 'Please return the study in Prolific. Nothing more will be recorded.')); }
+  SHOW.consent = () => {
+    if (REC.consent && REC.consent.declined) { declinedScreen(); return; }
+    sheet(
+      h('h1', null, 'Before you start'),
+      h('p', null, 'This study tests two versions of an early phone puzzle about carrying a fire to cold homes. After a short touch check you will play two sets of four short boards, try two quick puzzles about how the fire spreads, and answer some questions. It takes about 30 minutes.'),
+      h('p', { html: '<b>What we record:</b> your taps and drags inside the puzzle and when they happen, your answers, when you leave and return to this page, the time you started, your screen size, your phone’s operating system and browser versions, whether it is set to reduce motion, whether you muted the sound, and how smoothly the page runs. We do not record your name, your Prolific ID, your location, audio or video.' }),
+      h('p', { html: '<b>How it is used:</b> to decide whether to keep developing this prototype. Your typed answers are read by the researcher and analysed with automated text-analysis tools, including AI tools from outside providers, so please don’t type anything personal. Results are reported only as totals and anonymous quotes.' }),
+      h('p', { html: '<b>Sound:</b> the game can play a short tone when a home warms. You can mute it at any time with the speaker button.' }),
+      h('p', { html: '<b>Your choices:</b> taking part is voluntary. You can stop at any time by returning the study in Prolific. At the end there is an optional extra board; your payment is the same whether you play it or not.' }),
+      h('p', { html: '<b>How long we keep it:</b> the records are deleted 90 days after the study starts.' }),
+      h('p', { html: '<b>Questions:</b> message the researcher through Prolific with your study code.' }),
+      h('p', null, 'By tapping I agree you confirm you are 18 or older and agree to take part.'),
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => { if (U.HOSTED) { U.HOSTED.agree(next, CONSENT_VERSION); return; } REC.consent = { version: CONSENT_VERSION, at: now() }; ev('consent', CONSENT_VERSION); next(); } }, 'I agree'),
+      h('button', { style: 'width:100%;margin-top:10px', onclick: () => { ev('consentDeclined'); REC.consent = { version: CONSENT_VERSION, declined: true, at: now() }; freezeRecord(); declinedScreen(); } }, 'I do not agree')
+    );
+  };
+  SHOW.rules = () => {
+    sheet(
+      h('h1', null, 'How fire works'),
+      h('div', { class: 'card' }, ruleSvg(1), h('p', null, 'Fire spreads along fuel that touches side to side.')),
+      h('div', { class: 'card' }, ruleSvg(2), h('p', null, 'A home warms when fire touches its side. Homes pass no fire on.')),
+      h('div', { class: 'card' }, ruleSvg(3), h('p', null, 'Corners don’t count.')),
+      h('p', null, 'Your goal on every board: warm every home with the pieces in the tray.'),
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => { ev('rulesOk'); next(); } }, 'OK')
+    );
+  };
+  SHOW.armIntro = (st) => {
+    const a = ARM[st.arm];
+    sheet(
+      h('h1', null, armLabel(st.arm)),
+      h('div', { class: 'card', style: 'font-size:19px' }, a.card),
+      h('p', { class: 'small' }, 'A practice board, then three boards.'),
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => { ev('armStart', st.arm); next(); } }, 'Start')
+    );
+  };
+  SHOW.armQs = (st) => {
+    const store                      = {}; const key = 'arm' + st.block;
+    const err = h('div', { class: 'err' });
+    sheet(
+      h('h1', null, 'About ' + armLabel(st.arm).toLowerCase()),
+      likert('cause', 'How much did you feel that YOU made the result happen?', 'Not at all', 'Completely', store),
+      likert('enjoy', 'How much did you enjoy this version?', 'Not at all', 'Very much', store),
+      likert('clear', 'How clear was it why homes did or did not warm?', 'Not clear', 'Completely clear', store),
+      likert('calm', 'While playing this version, how did you feel?', 'Very tense', 'Completely calm', store),
+      textQ('describe', 'Describe this version in a few words.', store, true),
+      err,
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => {
+        if (!store.cause || !store.enjoy || !store.clear || !store.calm || !validText(store.describe)) { err.textContent = 'Please answer every question (a few words is fine).'; return; }
+        REC.answers[key] = { arm: st.arm, ...store }; ev('armQs', st.arm); next();
+      } }, 'Next')
+    );
+  };
+  SHOW.probeIntro = () => {
+    sheet(
+      h('h1', null, 'Two quick puzzles about the fire'),
+      h('p', null, 'These paths are already built. There is no Preview here: mark the homes you think will warm, answer about the barn when there is one, then strike and see.'),
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => { ev('probeIntro'); next(); } }, 'Start')
+    );
+  };
+  /** Neutral touch check: tap, drag and scroll on plain shapes, before any version (FL-1's). */
+  SHOW.warmup = () => {
+    const t0 = now();
+    const res                      = { t0, tapMs: null, dragMs: null, dragMisses: 0, scrollMs: null, scrolled: false, pointerType: null };
+    const task = h('div', { class: 'card warm', id: 'warmTask' });
+    const doneTask = () => { REC.warmup = res; ev('warmup', [res.tapMs, res.dragMs, res.scrollMs]); next(); };
+    const stepScroll = () => {
+      task.innerHTML = '';
+      const box = h('div', { class: 'scrollbox', id: 'warmScroll' });
+      for (let k = 1; k <= 14; k++) box.append(h('div', { class: 'line' }, 'Line ' + k));
+      const cont = h('button', { class: 'primary', id: 'warmScrollDone', style: 'width:100%', onclick: () => {
+        res.scrollMs = now() - t0; res.scrolled = box.scrollTop > 0; doneTask();
+      } }, 'Continue');
+      box.append(cont);
+      task.append(h('p', null, '3 of 3 · Scroll this list to the end, then tap Continue.'), box);
+    };
+    const stepDrag = () => {
+      task.innerHTML = '';
+      const pad = h('div', { class: 'pad', id: 'warmPad' });
+      const target = h('div', { class: 'target', id: 'warmTarget' });
+      const token = h('div', { class: 'token', id: 'warmToken' });
+      pad.append(target, token);
+      let drag = null;
+      token.addEventListener('pointerdown', (e) => { e.preventDefault(); try { token.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ } drag = { x: e.clientX, y: e.clientY }; res.pointerType = res.pointerType || e.pointerType; });
+      token.addEventListener('pointermove', (e) => { if (drag) token.style.transform = 'translate(' + (e.clientX - drag.x) + 'px,' + (e.clientY - drag.y) + 'px)'; });
+      const drop = () => {
+        if (!drag) return; drag = null;
+        const a = token.getBoundingClientRect(), b = target.getBoundingClientRect();
+        const cx = a.left + a.width / 2, cy = a.top + a.height / 2;
+        if (cx > b.left && cx < b.right && cy > b.top && cy < b.bottom) { res.dragMs = now() - t0; stepScroll(); }
+        else { res.dragMisses++; token.style.transform = ''; }
+      };
+      token.addEventListener('pointerup', drop); token.addEventListener('pointercancel', () => { drag = null; token.style.transform = ''; });
+      task.append(h('p', null, '2 of 3 · Drag the square into the box.'), pad);
+    };
+    const tap = h('button', { class: 'dot', id: 'warmTap', 'aria-label': 'Tap the circle', onclick: (e) => { res.tapMs = now() - t0; res.pointerType = res.pointerType || e.pointerType || null; stepDrag(); } });
+    task.append(h('p', null, '1 of 3 · Tap the circle.'), h('div', { class: 'tapzone' }, tap));
+    sheet(h('h1', null, 'Quick touch check'), h('p', { class: 'small' }, 'This checks that touch works on your phone. It is not part of the puzzle.'), task);
+  };
+  /** The one pairwise choice (S1) with its reason. */
+  SHOW.pairwise = () => {
+    const store                      = {}; const err = h('div', { class: 'err' });
+    const order = listOrder(REC.pairSide);
+    const btns = h('div', { class: 'row' });
+    for (const a of order) {
+      const b = h('button', { class: 'choice half', type: 'button', 'data-arm': a, onclick: () => { store.choice = a; [...btns.children].forEach((x) => x.classList.toggle('sel', x === b)); ev('pairTap', a); } },
+        h('span', null, h('b', null, armLabel(a)), h('br'), h('span', { class: 'small' }, ARM[a].card)));
+      btns.append(b);
+    }
+    sheet(
+      h('h1', null, 'Which would you rather keep playing?'),
+      h('div', { class: 'card pair' }, btns),
+      textQ('why', 'In a few words, why?', store, true),
+      err,
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => {
+        if (!store.choice) { err.textContent = 'Please choose one.'; return; }
+        if (!validText(store.why)) { err.textContent = 'Please write a few words.'; return; }
+        REC.pairwise = { choice: store.choice, why: store.why, display: order.join(''), at: now() }; ev('pairwise', store.choice); next();
+      } }, 'Next')
+    );
+  };
+  SHOW.meaning = () => {
+    const store                      = {}; const err = h('div', { class: 'err' });
+    sheet(
+      h('h1', null, 'One last question'),
+      textQ('meaning', 'What is this game, in one sentence, as you would tell a friend?', store, true),
+      err,
+      h('button', { class: 'primary', style: 'width:100%', onclick: () => {
+        if (!validText(store.meaning)) { err.textContent = 'Please write one sentence.'; return; }
+        REC.meaning = { text: store.meaning, at: now() }; ev('meaning'); next();
+      } }, 'Next')
+    );
+  };
+  SHOW.complete = () => {
+    if (!REC.completed) { REC.completed = true; ev('complete'); }
+    if (!REC.g3) REC.g3 = { offeredAt: now(), choice: null, display: listOrder(REC.optList).join('') };
+    // a reload during the optional board returns to it
+    if (REC.g3.choice && REC.g3.choice !== 'stop' && REC.g3.sceneEnd == null && REC.cur && REC.cur.g3) { startG3Scene(REC.g3.choice); return; }
+    save();
+    const done = REC.g3.choice;
+    if (done) { exitScreen(); return; }
+    const code = h('div', { class: 'card', style: 'font-size:18px' }, 'Completion code: ', ...(U.HOSTED ? U.HOSTED.codeParts() : [h('b', null, 'TEST-ONLY'), h('div', { class: 'small' }, 'Review build: no real code; nothing is sent.')]));
+    const kids = [h('h1', null, 'The study is complete. Thank you!'), code];
+    kids.push(
+      h('h2', null, 'Optional'),
+      h('p', null, 'If you would like, play one more fresh board (about a minute). Your payment is the same whatever you choose.'),
+      ...listOrder(REC.optList).map((a) => h('button', { class: 'choice', type: 'button', 'data-g3': a, onclick: () => g3Choose(a) },
+        h('span', null, h('b', null, armLabel(a) + ' board'), h('br'), h('span', { class: 'small' }, ARM[a].card)))),
+      h('button', { style: 'width:100%;margin-top:6px', 'data-g3': 'stop', onclick: () => g3Choose('stop') }, 'No thanks — finish')
+    );
+    if (DEV) kids.push(devRecordPanel());
+    const sh = sheet(...kids); sh.classList.add('done');
+    // which offer buttons were fully on screen at any time before the choice (scrolling counts)
+    const seen = new Set(REC.g3.seen || []);
+    const btns = [...document.querySelectorAll('[data-g3]')];
+    const full = (b) => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight && r.right <= innerWidth; };
+    const mark = () => { REC.g3.seen = [...seen].sort(); REC.g3.fullListSeen = seen.size === btns.length; };
+    btns.forEach((b) => { if (full(b)) seen.add(b.getAttribute('data-g3')); });
+    REC.g3.offerShown = (REC.g3.offerShown || []).concat([[now(), btns.every(full) ? 'allOnScreen' : 'notAllOnScreen', innerWidth, innerHeight]]);
+    mark();
+    try {
+      offerWatch = new IntersectionObserver((entries) => { for (const e of entries) if (e.intersectionRatio >= 0.99) seen.add(e.target.getAttribute('data-g3')); mark(); }, { threshold: [0.99] });
+      btns.forEach((b) => offerWatch.observe(b));
+    } catch (e) { /* no observer: the first view above is what is recorded */ }
+    save();
+  };
+  let offerWatch = null;
+  function g3Choose(c) {
+    if (offerWatch) { offerWatch.disconnect(); offerWatch = null; }
+    REC.g3.choice = c; REC.g3.at = now(); REC.g3.decisionMs = REC.g3.at - REC.g3.offeredAt;
+    const seen = new Set(REC.g3.seen || []); seen.add(c);
+    REC.g3.seen = [...seen].sort(); REC.g3.fullListSeen = seen.size === document.querySelectorAll('[data-g3]').length;
+    REC.g3.fullListSeenAtChoice = REC.g3.fullListSeen;
+    ev('g3', c);
+    if (c === 'stop') { exitScreen(); return; }
+    startG3Scene(c);
+  }
+  /** After the optional choice: the continuation question when a board was played, then one short optional exit explanation, then Finish. */
+  function exitScreen() {
+    const g = REC.g3; const c = g.choice; const played = c && c !== 'stop';
+    const store                      = { cont: g.cont || null };
+    const err = h('div', { class: 'err' });
+    const kids        = [h('h1', null, played ? 'Thanks for playing' : 'Nearly done')];
+    if (played) {
+      const yes = h('button', { class: 'choice half', type: 'button', 'data-cont': 'yes', onclick: () => pick('yes') }, 'Yes');
+      const no = h('button', { class: 'choice half', type: 'button', 'data-cont': 'no', onclick: () => pick('no') }, 'No');
+      const pick = (v) => { store.cont = v; yes.classList.toggle('sel', v === 'yes'); no.classList.toggle('sel', v === 'no'); ev('contTap', v); };
+      kids.push(h('div', { class: 'card' }, h('div', null, 'Would you like to play another board like this one?'), h('div', { class: 'row' }, yes, no)));
+    }
+    kids.push(textQ('exitWhy', played ? 'In a few words, why did you choose the ' + armLabel(c).toLowerCase() + ' board?' : 'In a few words, why did you choose to finish?', store, false));
+    kids.push(err, h('button', { class: 'primary', style: 'width:100%', onclick: () => {
+      if (played && !store.cont) { err.textContent = 'Please answer the first question.'; return; }
+      g.cont = store.cont; g.exitWhy = validText(store.exitWhy) ? store.exitWhy : ''; g.flowDone = true; ev('exit', [g.cont || '', g.exitWhy ? 1 : 0]);
+      finish();
+    } }, 'Finish'));
+    if (DEV) kids.push(devRecordPanel());
+    sheet(...kids);
+    save();
+  }
+  function startG3Scene(armKey) {
+    teardownScene();
+    startScene({ kind: 'scene', arm: armKey, scene: DATA.optional + armKey, block: 3, idx: 0, g3: true }, () => { SHOW.complete(); });
+  }
+  function finish() {
+    if (REC.finishedAt == null) { ev('finish'); REC.finishedAt = now(); }
+    freezeRecord();
+    allDone();
+  }
+  function allDone() {
+    const kids = [h('h1', null, 'All done.'), h('p', null, 'You can close this page now.'), ...(U.HOSTED ? U.HOSTED.doneParts() : [])];
+    if (DEV) kids.push(devRecordPanel());
+    sheet(...kids);
+  }
+  function devRecordPanel() {
+    const json = JSON.stringify(REC);
+    const pre = h('pre', { class: 'rec', id: 'rec' }, json.slice(0, 4000) + (json.length > 4000 ? '…' : ''));
+    const a = h('a', { href: 'data:application/json;charset=utf-8,' + encodeURIComponent(json), download: 'fl2b-record-' + (REC.slot || 'free') + '.json' }, 'Download session record');
+    return h('div', { class: 'card' }, h('div', { class: 'small' }, 'Owner/test view only: session record (' + json.length + ' bytes). Nothing was sent.'), a, pre);
+  }
+
+  /* ------------------------------------------------------------------ rule diagrams */
+  function ruleSvg(kind) {
+    const s = 26, cells = [];
+    const sq = (x        , y        , fill        , extra         ) => cells.push(`<rect x="${x * s + 2}" y="${y * s + 2}" width="${s - 4}" height="${s - 4}" rx="5" fill="${fill}" ${extra || ''}/>`);
+    const fire = (x, y) => cells.push(`<circle cx="${x * s + s / 2}" cy="${y * s + s / 2}" r="${s / 2 - 3}" fill="#f06a1d"/><circle cx="${x * s + s / 2}" cy="${y * s + s / 2 + 2}" r="${s / 5}" fill="#ffd43b"/>`);
+    const home = (x, y, warm) => cells.push(`<path d="M${x * s + 4} ${y * s + s / 2} L${x * s + s / 2} ${y * s + 4} L${x * s + s - 4} ${y * s + s / 2} V${y * s + s - 4} H${x * s + 4} Z" fill="${warm ? '#9a6b2f' : '#5c6b78'}"/><rect x="${x * s + s / 2 - 4}" y="${y * s + s / 2 + 1}" width="8" height="7" fill="${warm ? '#ffd43b' : '#3a4550'}"/>`);
+    let wpx = 5;
+    if (kind === 1) { fire(0, 0); sq(1, 0, '#f08c3a'); sq(2, 0, '#f08c3a'); sq(3, 0, '#f08c3a'); sq(4, 0, '#b08968'); wpx = 5; }
+    if (kind === 2) { fire(0, 0); sq(1, 0, '#f08c3a'); sq(2, 0, '#f08c3a'); home(3, 0, true); wpx = 4; }
+    if (kind === 3) { fire(0, 1); sq(1, 1, '#f08c3a'); sq(2, 0, '#b08968', 'stroke="#c2410c" stroke-dasharray="3 2"'); home(3, 0, false); wpx = 4; }
+    const hh = kind === 3 ? 2 : 1;
+    const svg = `<svg class="ruleimg" width="${wpx * s}" height="${hh * s}" viewBox="0 0 ${wpx * s} ${hh * s}" aria-hidden="true">${cells.join('')}</svg>`;
+    return h('div', { html: svg });
+  }
+
+  SHOW.scene = (st) => startScene(st, () => next());
+  SHOW.probe = (st) => startScene(st, () => next());
+  /* ------------------------------------------------------------------ owner landing (review build) */
+  function deviceLine() {
+    const d = REC.device;
+    const os = /^Android/.test(d.os) ? (d.platform === 'Android' && d.platformVersion ? 'Android ' + String(d.platformVersion).split('.')[0] : 'Android (version not reported to the page)') : d.os;
+    return 'This device: ' + os + ' · ' + d.browser + ' · ' + d.vw + '×' + d.vh + ' at ' + (+d.dpr).toFixed(2) + ' · touch ' + (d.touch ? 'yes' : 'no') + ' · reduced motion ' + (REDUCED ? 'on' : 'off') + ' · sound: one tone per home, mutable'
+      + ' · progress kept ' + (STORE.kind === 'session' ? 'in session storage' : STORE.kind === 'local' ? 'in local storage' : 'in this tab only (storage refused)');
+  }
+  function landing() {
+    if (U.HOSTED) { invalidLink(); return; } // hosted: never the owner landing, free play or self-test
+    const list = h('div', { class: 'list' });
+    for (const a of DATA.assignment) {
+      list.append(h('button', { 'data-slot': a.slot, onclick: () => { if (!TEST) { try { history.replaceState(null, '', '?slot=' + a.slot); } catch (e) { /* file: or sandbox may refuse; resume then needs ?slot= */ } } start(a); } }, h('b', null, a.slot), '  order ' + a.order + '  ', h('span', { class: 'small' }, '(pairwise first ' + a.pairFirst + ', offer first ' + a.optFirst + ')')));
+    }
+    const free = h('div', { class: 'list' });
+    for (const sid of Object.keys(DATA.scenes).filter((k) => DATA.scenes[k].kind !== 'probe')) {
+      const d = DATA.scenes[sid];
+      free.append(h('button', { 'data-free': sid, onclick: () => { REC.slot = 'free'; REC.order = REC.order || 'BS'; startScene({ kind: 'scene', arm: d.arm, scene: sid, block: 9, idx: 0 }, landing); } }, (d.arm === 'S' ? 'STAKES' : 'BUDGET') + ' — ' + sid + ' (' + d.kind + (d.sym === 'r2' ? ', rotated' : '') + ')'));
+    }
+    for (const sid of DATA.probes) free.append(h('button', { 'data-free': sid, onclick: () => { REC.slot = 'free'; startScene({ kind: 'probe', arm: DATA.scenes[sid].arm, scene: sid, block: 9, idx: DATA.probes.indexOf(sid) }, landing); } }, 'Quick puzzle — ' + sid));
+    const prev = RESUME ? storedSession() : null;
+    const pa = prev && prev.rec && prev.rec.slot && prev.rec.finishedAt == null && !(prev.rec.consent && prev.rec.consent.declined) ? DATA.assignment.find((x) => x.slot === prev.rec.slot) : null;
+    const resumeBtn = pa ? h('button', { class: 'primary', id: 'resumeSlot', style: 'width:100%', onclick: () => resumeSession(pa, prev) }, 'Resume test slot ' + pa.slot + ' (in progress in this tab)') : null;
+    const out = h('div', { class: 'small', id: 'selftestOut' });
+    const self = h('button', { id: 'selftest', style: 'width:100%', onclick: () => { const r = runSelfTest(); out.textContent = r.text; ev('selftest', [r.pass, r.total]); } }, 'Run the replay self-test');
+    sheet(
+      h('h1', null, 'FL-2B review build — owner and reviewer copy'),
+      h('p', { class: 'small' }, 'Not a participant link: nothing is recorded outside this page and nothing is sent anywhere. Build ' + BUILD.id + ', scenes ' + String(DATA.scenesHash).slice(0, 12) + '.'),
+      h('p', { class: 'small', id: 'deviceLine' }, deviceLine()),
+      ...(resumeBtn ? [resumeBtn] : []),
+      h('h2', null, 'Phone check: replay and state hash'), self, out,
+      h('h2', null, 'Play a full session as a test slot'), list,
+      h('h2', null, 'Free play: any board'), free
+    );
+  }
+  /** Replays the built-in input logs on this device and compares the state and log hashes with Node's (phone check). */
+  function runSelfTest() {
+    const st = DATA.selftest || { vectors: [], sha: [] };
+    let pass = 0; const lines           = [];
+    for (const v of st.vectors) {
+      const def = DATA.scenes[v.sid]; const sc = FLE.parseScene(def);
+      const rr = FLM.replayLog(sc, v.cond, v.sid, DATA.hashes[v.sid], def.laid || [], v.log);
+      const got = rr.error ? 'error' : FLM.stateHash(rr.board);
+      const ok = !rr.error && got === v.stateHash && FLM.logHash(v.log) === v.logHash;
+      if (ok) pass++;
+      lines.push(v.sid + ' ' + v.cond + ' (' + v.log.length + ' actions): ' + (ok ? 'same hash ' : 'DIFFERENT ') + String(got).slice(0, 12));
+    }
+    let shaOk = 0; for (const [txt, want] of st.sha) if (W.FLHash.sha256Hex(txt) === want) shaOk++;
+    const total = st.vectors.length;
+    const text = (pass === total && shaOk === st.sha.length ? 'PASS: ' : 'FAIL: ') + pass + ' of ' + total + ' input logs reproduce their state hash; SHA-256 known answers ' + shaOk + ' of ' + st.sha.length + '. ' + lines.join('; ') + '.';
+    return { pass, total, shaOk, text };
+  }
+  function invalidLink() {
+    ev('invalidLink');
+    sheet(h('h1', null, 'This link is not valid.'), h('p', null, 'Please go back to the study page and use the link you were given.'));
+  }
+
+  /* ------------------------------------------------------------------ boot */
+  function boot() {
+    if (REDUCED) document.documentElement.classList.add('reduce');
+    if (U.HOSTED) { const g = U.HOSTED.admit(); if (g === 'nocred') { invalidLink(); return; } if (g === 'declined') { U.FROZEN = true; declinedScreen(); return; } if (g !== 'ok') return; } // hosted: the Chrome gate and the invitation first
+    const want = QS.get('slot');
+    if (want === null) { landing(); return; }
+    const a = DATA.assignment.find((x) => x.slot === want);
+    if (!a) { invalidLink(); return; } // never show the owner landing to a mistyped participant link
+    const resumed = storedSession();
+    if (RESUME && resumed && resumed.slot === want && resumed.rec && resumed.rec.slot === want) { resumeSession(a, resumed); return; }
+    start(a);
+  }
+  /** Continue the same session: same time base, same record, same step (a running board is restored). */
+  function resumeSession(a, resumed) {
+    Object.assign(REC, resumed.rec);
+    U.T0 = REC.t0 || Date.parse(REC.startedAt) || U.T0;
+    REC.resumes = (REC.resumes || []).concat([now()]);
+    setSlot(a); U.FLOW = buildFlow(a);
+    ev('resume', resumed.stepIdx);
+    if (REC.finishedAt != null) { U.FROZEN = true; U.stepIdx = U.FLOW.length - 1; allDone(); return; } // a finished session is never restarted or rewritten
+    if (REC.consent && REC.consent.declined) { U.FROZEN = true; declinedScreen(); return; }
+    go(Math.min(resumed.stepIdx, U.FLOW.length - 1), true);
+  }
+
+  Object.assign(U, { start, go, deviceLine, CONSENT_VERSION });
+  boot();
+})();
+</script>
+</body>
+</html>
